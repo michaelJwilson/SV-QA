@@ -1,0 +1,35 @@
+import os
+import glob
+import numpy           as     np
+import astropy.io.fits as     fits
+
+from   astropy.table   import Table
+
+
+def get_gaia():
+  files  = glob.glob('/project/projectdirs/cosmo/work/gaia/chunks-gaia-dr2-astrom/*.fits')
+  ##  print(files)
+
+  result = np.zeros([3]).reshape(1, 3)
+  
+  for i, _file in enumerate(files):
+    hdr  = fits.open(_file)[1].header
+    dat  = Table(fits.open(_file)[1].data)['ra', 'dec', 'phot_g_mean_mag']
+    dat  = dat[dat['phot_g_mean_mag'] < 13.]
+
+    arr  = np.c_[np.array(dat['ra']), np.array(dat['dec']), np.array(dat['phot_g_mean_mag'])]
+    
+    result = np.vstack([result, arr])
+
+    print('Retrieved GAIA {} of {}.'.format(i, len(files)))
+    
+  return  result[1:]
+    
+
+if __name__ == '__main__':
+  cat = Table(get_gaia())
+
+  scratch = os.environ['CSCRATCH']
+  cat.write(scratch + '/BGS/SV-ASSIGN/gaia_stellar_mask.fits', format='fits', overwrite=True)
+
+  print('\n\nDone.\n\n')

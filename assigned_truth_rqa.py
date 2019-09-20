@@ -1,0 +1,57 @@
+import glob
+import random
+import numpy             as      np
+import pylab             as      pl
+import matplotlib.pyplot as      plt
+import astropy.io.fits   as      fits
+import astropy.units     as      u
+
+from   astropy.table      import  Table, join
+from   astropy            import  constants as const
+from   desitarget.geomask import circles
+
+
+files       = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/*.fits')
+nsurvey     = len(files)
+nrow        = np.int(nsurvey / 2)
+
+fig, axarr  = plt.subplots(nrow, 2, sharex=True)
+fig.set_size_inches((10, 10))
+
+uspec       = []
+ 
+for i, _file in enumerate(files):  
+  survey    = _file.split('/')[-1].split('.')[0].split('-standard')[0]
+  matched   = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/' + survey +'.fits')[1].data)
+
+  print(survey)
+  
+  targetids = matched['TARGETID'].quantity.value.tolist()
+  uspec    += targetids
+
+  rs        = matched['FLUX_R'].quantity / matched['MW_TRANSMISSION_R'].quantity
+  rs        = 22.5 - 2.5 * np.log10(rs)
+  rs        = np.sort(rs)
+  rs        = rs[np.isfinite(rs)]
+  
+  row       = i % nrow
+  col       = i % 2
+  
+  axarr[row][col].hist(rs, bins=100, label=survey, alpha=0.3)
+
+  ##  Note problem with AGES. 
+  axarr[row][col].set_xlim(19., 21.)
+  axarr[row][col].set_ylim(1., 1.e4)
+
+  axarr[row][col].set_yscale('log')
+
+  axarr[row][col].legend(frameon=False, loc=1, ncol=2)
+
+##
+uspec = set(uspec)
+
+print('Unique spectra: {}'.format(len(uspec)))
+
+axarr[0][0].set_title('Unique  spectra:  {}'.format(len(uspec)))
+
+pl.savefig('matched_rhist.png')
