@@ -79,9 +79,11 @@ for x in ['R', 'GRZ']:
   uax.set_xticklabels(uaxt)
   uax.set_xlabel(r'$\Delta$ {} / (IN DESI) STD. DEV.'.format(x))
   '''
-  ##  pl.show()
-  pl.savefig(x + '.png')
+  pl.show()
+  ##  pl.savefig(x + '.png')
   pl.clf()
+
+exit(1)
 
 ##
 bins = np.arange(0., 10., 0.25)
@@ -99,7 +101,7 @@ pl.yscale('log')
 pl.legend(frameon=False)
 pl.savefig('fracflux.png')
 pl.clf()
-
+'''
 '''
 ##
 bins = np.arange(0., 2., 0.025)

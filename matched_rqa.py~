@@ -19,7 +19,6 @@ fig, axarr  = plt.subplots(nrow, 2, sharex=True)
 fig.set_size_inches((10, 10))
 
 uspec       = []
-nstar       =  0
  
 for i, _file in enumerate(files):  
   survey    = _file.split('/')[-1].split('.')[0].split('-standard')[0]
@@ -30,17 +29,15 @@ for i, _file in enumerate(files):
   targetids = matched['TARGETID'].quantity.value.tolist()
   uspec    += targetids
 
-  zs        = matched['Z'].quantity 
-  zs        = np.sort(zs)
-  zs        = zs[np.isfinite(zs)]
-
-  if survey not in ['ages_reduced-north', 'ages_reduced-south']:
-    nstar  += len(zs[zs <= 0.])
+  rs        = matched['FLUX_R'].quantity / matched['MW_TRANSMISSION_R'].quantity
+  rs        = 22.5 - 2.5 * np.log10(rs)
+  rs        = np.sort(rs)
+  rs        = rs[np.isfinite(rs)]
   
   row       = i % nrow
   col       = i % 2
   
-  axarr[row][col].hist(zs, bins=100, label=survey, alpha=0.3)
+  axarr[row][col].hist(rs, bins=100, label=survey, alpha=0.3)
 
   ##  Note problem with AGES. 
   axarr[row][col].set_xlim(-.2, 4.)
@@ -56,6 +53,5 @@ uspec = set(uspec)
 print('Unique spectra: {}'.format(len(uspec)))
 
 axarr[0][0].set_title('Unique  spectra:  {}'.format(len(uspec)))
-axarr[0][1].set_title('Stellar spectra:  {}'.format(nstar))
 
-pl.savefig('matched_zhist.png')
+pl.savefig('matched_rhist.png')

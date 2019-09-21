@@ -9,9 +9,10 @@ import astropy.units     as      u
 from   astropy.table      import  Table, join
 from   astropy            import  constants as const
 from   desitarget.geomask import circles
+from   matplotlib.ticker  import FormatStrFormatter
 
 
-files       = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/*.fits')
+files       = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/*.fits')
 nsurvey     = len(files)
 nrow        = np.int(nsurvey / 2)
 
@@ -22,7 +23,7 @@ uspec       = []
  
 for i, _file in enumerate(files):  
   survey    = _file.split('/')[-1].split('.')[0].split('-standard')[0]
-  matched   = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/' + survey +'.fits')[1].data)
+  matched   = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey +'.fits')[1].data)
 
   print(survey)
   
@@ -54,4 +55,10 @@ print('Unique spectra: {}'.format(len(uspec)))
 
 axarr[0][0].set_title('Unique  spectra:  {}'.format(len(uspec)))
 
-pl.savefig('matched_rhist.png')
+axarr[-1][0].set_xlabel(r'$r_{AB}$')
+axarr[-1][1].set_xlabel(r'$r_{AB}$')
+
+axarr[-1][0].xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+axarr[-1][1].xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+pl.savefig('plots/assigned_truth_rhist.png')

@@ -1,0 +1,85 @@
+import os
+import glob
+import random
+import matplotlib
+import numpy                 as      np
+import pylab                 as      pl
+import matplotlib.pyplot     as      plt
+import astropy.io.fits       as      fits
+import astropy.units         as      u
+
+from   astropy.table         import  Table, join, hstack
+from   astropy               import  constants as const
+from   desitarget.geomask    import  circles
+from   desiutil.bitmask      import  BitMask
+from   desitarget.targetmask import  load_mask_bits
+from   astropy.coordinates   import  SkyCoord
+from   astropy               import  units     as u
+
+
+tiles      = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')[1].data)
+
+##
+tycho      = Table(fits.open('/global/project/projectdirs/cosmo/staging/tycho2/tycho2.kd.fits')[1].data)
+
+##
+_assigned  = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/assigned_targets.fits')[1].data)
+_assigned.sort('BRICK_OBJID')
+
+scratch    = os.environ['CSCRATCH']
+sv_mtl     = Table(fits.open(scratch + '/BGS/SV-ASSIGN/tiles/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits')[1].data[:500000])
+
+##  Limit to only BGS.                                                                                                                                                                                                     
+sv_mtl     = sv_mtl[sv_mtl['SV1_BGS_TARGET'].quantity.value > 0]
+
+##
+_bitdefs   = load_mask_bits("sv1")
+desi_mask  = BitMask('sv1_desi_mask', _bitdefs)
+
+types      =  desi_mask.names()
+bits       = [desi_mask.bitnum(x) for x in types]
+
+print('\n\nDESI SV types:\n\n')
+
+##  for x, y in zip(types, bits):
+##    print(x, y)
+
+_bitdefs   = load_mask_bits("sv1")
+bgs_mask   = BitMask('sv1_bgs_mask', _bitdefs)
+
+types      =  bgs_mask.names()
+bits       = [bgs_mask.bitnum(x) for x in types]
+
+print('\n\nBGS SV types:\n')
+
+##  for x, y in zip(types, bits):
+##    print(x, y)
+
+assigned   = join(_assigned, sv_mtl, keys=['BRICKID', 'BRICK_OBJID'])
+##  cassigned  = SkyCoord(assigned['RA'].quantity * u.deg, assigned['DEC'].quantity * u.deg, frame='icrs')      
+
+##  print(_assigned)
+##  print(sv_mtl)
+
+##  for x in assigned.columns:
+##    print(x)
+
+for band in ['G', 'R', 'Z']:
+  fracflux = assigned['FRACFLUX_{}'.format(band)].quantity
+  masked   = fracflux > 5.
+
+  plt.scatter(assigned['RA'][masked], assigned['DEC'][masked], c=fracflux[masked], norm=matplotlib.colors.LogNorm(), s=4, vmin=1, vmax=500)
+  pl.colorbar(label=r'$FRACFLUX_{}$'.format(band))
+  pl.show()
+  
+'''
+##  EBV
+
+FRACMASKED_G
+FRACMASKED_R
+FRACMASKED_Z
+
+FRACIN_G
+FRACIN_R
+FRACIN_Z
+'''

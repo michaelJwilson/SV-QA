@@ -1,0 +1,8 @@
+Rough logic:
+
+--  Get assignment output with get_assigned.py
+--  Make GAIA star mask catalogue with make_gaia.py
+--  Split .mtl with mtl_bytile.
+--  Copy necessary truth cats. to scratch with get_truth.py
+--  Standardise RA, DEC and Z columns with standardise.py
+--  Split by tile with truth_bytile.

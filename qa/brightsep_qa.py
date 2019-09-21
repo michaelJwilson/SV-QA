@@ -59,6 +59,7 @@ bits       = [bgs_mask.bitnum(x) for x in types]
 
 ##  
 assigned   = join(_assigned, sv_mtl, keys=['BRICKID', 'BRICK_OBJID'], join_type='inner')
+assert  len(_assigned) == len(assigned)
 
 splits     = {}
 title      = ''
@@ -74,62 +75,6 @@ for _type in ['BGS_FAINT', 'BGS_BRIGHT', 'BGS_FAINT_EXT', 'BGS_LOWQ', 'BGS_FIBMA
   print(sample, len(splits[_type]))
 
 ##
-bins = np.arange(0., 10., 0.25)
-    
-for band in ['G', 'R', 'Z']:
-  fracflux = assigned['FRACFLUX_{}'.format(band)].quantity
-  masked   = len(fracflux[fracflux > 5.])
-
-  pl.hist(fracflux, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)
-
-pl.axvline(5., c='k')
-pl.xlim(0., 10)
-pl.xlabel('FRACFLUX')
-pl.yscale('log')
-pl.legend(frameon=False)
-pl.title(title, fontsize=9)
-#pl.show()
-pl.savefig('fracflux.png')
-pl.clf()
-
-##
-bins = np.arange(0., 2., 0.025)
-
-for band in ['G', 'R', 'Z']:
-  fracmasked = assigned['FRACMASKED_{}'.format(band)].quantity
-  masked     = len(fracmasked[fracmasked > .4])
-
-  pl.hist(fracmasked, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)
-
-pl.axvline(.4, c='k')
-pl.xlim(0., 1.1)
-pl.xlabel('FRACMASKED')
-pl.yscale('log')
-pl.legend(frameon=False)
-pl.title(title, fontsize=9) 
-#pl.show()
-pl.savefig('fracmasked.png')
-pl.clf()
-
-'''
-##
-bins = np.arange(0., 2., 0.025)
-
-for band in ['G', 'R', 'Z']:                                                                                                                                                                                        
-  fracin = assigned['FRACIN_{}'.format(band)].quantity                                                                                                                                                        
-  masked = len(fracin[fracin < .3])
-  
-  pl.hist(fracin, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)                                                                                                                                         
-
-pl.axvline(.4, c='k')
-pl.xlim(0., 1.1)
-pl.xlabel('FRACIN') 
-pl.yscale('log')                                                                                                                                                                                                    
-pl.legend(frameon=False)                                                                                                                                                                                            
-pl.savefig('fracin.png')
-pl.clf()
-'''
-
 sep_limit                  = .5
 
 ##  Separation from bright objects. 
@@ -145,7 +90,7 @@ pl.hist(60. * d2d, bins=50, alpha=0.5)
 pl.xlabel('Tycho (VT < 13.) separation [arcmin.]')
 pl.xscale('log')
 pl.yscale('log')
-pl.savefig('tycho.png')
+pl.savefig('plots/tycho.png')
 pl.clf()
 
 ##
@@ -158,7 +103,7 @@ pl.hist(60. * d2d, bins=50, alpha=0.5)
 pl.xlabel('LSLGA separation [arcmin]')
 pl.xscale('log')
 pl.yscale('log')
-pl.savefig('LSLGA.png')
+pl.savefig('plots/LSLGA.png')
 pl.clf()
 
 ##
@@ -170,7 +115,7 @@ pl.hist(60. * d2d, bins=50, alpha=0.5)
 pl.xlabel('NGCSC separation [arcmin]')
 pl.xscale('log')
 pl.yscale('log')
-pl.savefig('NGCSC.png')    
+pl.savefig('plots/NGCSC.png')    
 pl.clf()
 
 ##
@@ -182,5 +127,6 @@ pl.hist(60. * d2d, bins=50, alpha=0.5)
 pl.xlabel('GAIA (G < 13) separation [arcmin]')
 pl.xscale('log')
 pl.yscale('log')
-pl.savefig('GAIA.png')
+pl.savefig('plots/GAIA.png')
 pl.clf()
+

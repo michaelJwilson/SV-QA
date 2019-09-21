@@ -17,7 +17,8 @@ tiles   = Table(_file[1].data)['AIRMASS', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEF
 
 ##  https://desi.lbl.gov/trac/wiki/TargetSelectionWG/TargetingTruthTables/MatchedTruthCatalogs
 scratch = os.environ['CSCRATCH']
-files   = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/standard/*.fits')
+
+files   = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/*.fits')
 
 for _file in files:    
   ##  Truth spectroscopic catalogue.  Look for a given survey in both north and south. 
@@ -48,4 +49,7 @@ for _file in files:
 
     for _tile in utiles:
       out  = truth[truth['TILEID'] == _tile]
+
+      print('Writing {} ...'.format(fname + '/bytile/' + tail + '_{:06d}.fits'.format(_tile)))
+      
       out.write(fname + '/bytile/' + tail + '_{:06d}.fits'.format(_tile), format='fits', overwrite=True)

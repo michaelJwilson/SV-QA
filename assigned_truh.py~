@@ -25,6 +25,10 @@ tiles      = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/
 _assigned  = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/assigned_targets.fits')[1].data)
 _assigned.sort('BRICK_OBJID')
 
+print(_assigned)
+
+exit(1)
+
 if compute:
   files    = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/standard/*.fits')
 
@@ -52,7 +56,7 @@ for _file in files:
 
     ##  print(legacy.columns)
     
-    matched      = join(_assigned, legacy, keys=['BRICKID', 'BRICK_OBJID'])
+    matched      = join(_assigned, legacy, keys=['BRICKID', 'OBJID'])
   
     ##  print(len(targetids), np.sum(isin))
      
@@ -63,10 +67,10 @@ for _file in files:
     if len(matched) == 0:
       continue
 
-    matched.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey + '.fits', format='fits', overwrite=True)
+    matched.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/' + survey + '.fits', format='fits', overwrite=True)
 
   else:
-    matched    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey +'.fits')[1].data)
+    matched    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/matched/' + survey +'.fits')[1].data)
     
   label        = survey + '-{:d}'.format(len(matched))
   

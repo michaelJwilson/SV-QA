@@ -1,0 +1,243 @@
+import os
+import glob
+import random
+import numpy                 as      np
+import pylab                 as      pl
+import matplotlib.pyplot     as      plt
+import astropy.io.fits       as      fits
+import astropy.units         as      u
+import healpy                as      hp
+
+from   astropy.table         import  Table, join, hstack
+from   astropy               import  constants as const
+from   desitarget.geomask    import  circles
+from   desiutil.bitmask      import  BitMask
+from   desitarget.targetmask import  load_mask_bits
+from   astropy.coordinates   import  SkyCoord
+from   astropy               import  units     as u
+from   desimodel.footprint   import  pix2tiles, find_tiles_over_point, is_point_in_desi
+
+
+_file      = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')   
+
+##  https://faun.rc.fas.harvard.edu/eschlafly/desi/tiling/dr8/note.pdf
+##  AIRMASS:        Airmass if observed 15. deg. from transit.
+##  STAR_DENSITY:   Median # of GAIA stars with G < 19.5 per sq. deg. in tile. 
+##  IMAGEFRAC R:    Fraction of this tile within 1.605 deg. of r imaging.     
+##  IMAGEFRAC GRZ:  Fraction of this tile within 1.605 deg. of grz imaging. 
+##
+tiles      = Table(_file[1].data)['AIRMASS', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEFRAC_GRZ', 'TILEID', 'RA', 'DEC']
+
+'''
+##  http://legacysurvey.org/dr8/external/
+tycho      = Table(fits.open('/global/project/projectdirs/cosmo/staging/tycho2/tycho2.kd.fits')[1].data)
+tycho      = tycho[tycho['MAG_VT'] < 13.]
+
+##  Large galaxy cat.
+lgal       = Table(fits.open('/global/project/projectdirs/cosmo/staging/largegalaxies/v2.0/LSLGA-v2.0.fits')[1].data)
+
+##
+ngcsc      = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/NGC-star-clusters.fits', ignore_missing_end=True)[1].data)
+
+##
+_assigned  = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/assigned_targets.fits')[1].data)
+_assigned.sort('BRICK_OBJID')
+
+print(np.unique(_assigned['FA_TYPE'].quantity, return_counts=True))
+
+##  Retain only the science targets. 
+_assigned  = _assigned[_assigned['FA_TYPE'].quantity == 1]
+##  print(_assigned)
+'''
+##
+nrows      = np.int(500000)
+scratch    = os.environ['CSCRATCH']
+_sv_mtl    = fits.open(scratch + '/BGS/SV-ASSIGN/tiles/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits')
+
+sv_mtl     = Table(_sv_mtl[1].data)  ##  sv_mtl     = Table(_sv_mtl[1].data[:nrows])
+
+##  print(tiles)
+
+##  Limit to only BGS.
+sv_mtl     = sv_mtl[sv_mtl['SV1_BGS_TARGET'].quantity.value > 0]
+
+##
+nside      = 64
+pixels     = np.unique(sv_mtl['HPXPIXEL'].quantity)
+
+##  HEALPIX ERROR. 
+##  whattile   = pix2tiles(64, pixels, tiles=tiles)
+##  theta, phi = hp.pix2ang(nside, pixels, nest=True)
+
+(indesi, tindex)          = is_point_in_desi(tiles, sv_mtl['RA'].quantity.value, sv_mtl['DEC'].quantity.value, return_tile_index=True)
+
+del tiles['RA']
+del tiles['DEC']
+
+sv_mtl['TILEID']          = -99 * np.ones_like(sv_mtl['RA'].quantity.value, dtype=np.int)
+sv_mtl['TILEID'][indesi]  = tiles['TILEID'].quantity[tindex[indesi]]
+sv_mtl.sort('TILEID')
+  
+##  Not associated to a tile?
+##  notin                 = sv_mtl[sv_mtl['TILEID'] < 0]
+##  notin.sort('DEC')
+##  print(notin)
+
+##  pl.plot(notin['RA'], notin['DEC'], c='k', marker='.', lw=0, markersize=1)
+##  pl.show()
+
+sv_mtl.sort('TILEID')
+
+##
+sv_mtl                   = sv_mtl[sv_mtl['TILEID'] > 0]
+sv_mtl                   = join(sv_mtl, tiles, keys=['TILEID'], join_type='left')
+sv_mtl.sort('STAR_DENSITY')
+
+utiles     = np.unique(sv_mtl['TILEID'].quantity)
+
+for _tile in utiles:
+  fname    = scratch + '/BGS/SV-ASSIGN/svmtl_{:06d}.fits'.format(_tile)
+  tile_cut = sv_mtl[sv_mtl['TILEID'] == _tile]
+
+  print(tile_cut)
+  
+  tile_cut.write(fname, format='fits', overwrite=True)
+
+exit(1)
+
+'''
+##                                                                                                                                                                                                                                                        
+_files     = glob.glob('/project/projectdirs/desi/target/catalogs/dr8/0.32.0/targets/sv/resolve/bright/*.fits')
+
+for _file in _files:  
+  ##  ['DCHISQ_1', 'GALDEPTH_G_1', 'GALDEPTH_R_1', 'GALDEPTH_Z_1', 'MASKBITS_1', 'HPXPIXEL_1']
+  dr8      = Table(fits.open(_file)[1].data)['MASKBITS', 'HPXPIXEL', 'BRICKID','BRICK_OBJID']      
+  sv_mtl   = join(sv_mtl, dr8, keys=['BRICKID', 'BRICK_OBJID'], join_type='left')
+'''
+
+##
+_bitdefs   = load_mask_bits("sv1")
+desi_mask  = BitMask('sv1_desi_mask', _bitdefs)
+
+types      =  desi_mask.names()
+bits       = [desi_mask.bitnum(x) for x in types]
+
+print('\n\nDESI SV types:\n\n')
+
+##  for x, y in zip(types, bits):
+##    print(x, y)
+
+_bitdefs   = load_mask_bits("sv1")
+bgs_mask   = BitMask('sv1_bgs_mask', _bitdefs)
+
+types      =  bgs_mask.names()
+bits       = [bgs_mask.bitnum(x) for x in types]
+
+print('\n\nBGS SV types:\n')
+
+##  for x, y in zip(types, bits):
+##    print(x, y)
+
+assigned   = join(_assigned, sv_mtl, keys=['BRICKID', 'BRICK_OBJID'], join_type='left')
+
+print(len(_assigned))
+print(len(sv_mtl))
+
+##  for x in assigned.columns:
+##    print(x)
+
+for x in ['AIRMASS', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEFRAC_GRZ', 'EBV']:
+  sample = assigned[x].quantity                                                                                                                                                                               
+  pl.hist(sample, bins=50, alpha=0.5)  
+  #pl.axvline(5., c='k')                                                                                                                                                                                                                
+  ##pl.xlim(0., 10)                                                                                                                                                                                                                      
+  pl.xlabel(x)                                                                                                                                                                                                                  
+  pl.yscale('log')                                                                                                                                                                                                                       
+  pl.legend(frameon=False)                                                                                                                                                                                                               
+  pl.savefig(x + '.png')                                                                                                                                                                                                                              
+  pl.clf()    
+
+
+##
+bins = np.arange(0., 10., 0.25)
+    
+for band in ['G', 'R', 'Z']:
+  fracflux = assigned['FRACFLUX_{}'.format(band)].quantity
+  masked   = len(fracflux[fracflux > 5.])
+
+  pl.hist(fracflux, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)
+
+pl.axvline(5., c='k')
+pl.xlim(0., 10)
+pl.xlabel('FRACFLUX')
+pl.yscale('log')
+pl.legend(frameon=False)
+pl.savefig('fracflux.png')
+pl.clf()
+
+##
+bins = np.arange(0., 2., 0.025)
+
+for band in ['G', 'R', 'Z']:
+  fracmasked = assigned['FRACMASKED_{}'.format(band)].quantity
+  masked     = len(fracmasked[fracmasked > .4])
+
+  pl.hist(fracmasked, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)
+
+pl.axvline(.4, c='k')
+pl.xlim(0., 2.)
+pl.xlabel('FRACMASKED')
+pl.yscale('log')
+pl.legend(frameon=False)
+pl.savefig('fracmasked.png')
+pl.clf()
+
+##
+bins = np.arange(0., 2., 0.025)
+
+for band in ['G', 'R', 'Z']:                                                                                                                                                                                        
+  fracin = assigned['FRACIN_{}'.format(band)].quantity                                                                                                                                                        
+  masked = len(fracin[fracin < .3])
+  
+  pl.hist(fracin, bins=bins, label=band + '-{}'.format(masked), alpha=0.5)                                                                                                                                         
+
+pl.axvline(.4, c='k')
+pl.xlim(0., 1.1)
+pl.xlabel('FRACIN') 
+pl.yscale('log')                                                                                                                                                                                                    
+pl.legend(frameon=False)                                                                                                                                                                                            
+pl.savefig('fracin.png')
+pl.clf()
+
+##  Separation from bright objects. 
+##  cngsc     = SkyCoord(   ngcsc['RA'].quantity * u.deg,    ngcsc['DEC'].quantity * u.deg, frame='icrs') 
+cassigned = SkyCoord(assigned['RA'].quantity * u.deg, assigned['DEC'].quantity * u.deg, frame='icrs')    
+ctycho    = SkyCoord(   tycho['RA'].quantity * u.deg,    tycho['DEC'].quantity * u.deg, frame='icrs')
+clgal     = SkyCoord(    lgal['RA'].quantity * u.deg,     lgal['DEC'].quantity * u.deg, frame='icrs')
+cngcsc    = SkyCoord(   ngcsc['ra'].quantity * u.deg,    ngcsc['dec'].quantity * u.deg, frame='icrs')
+
+##
+idxc, idxcatalog, d2d, d3d = ctycho.search_around_sky(cassigned[::1000], 3. * u.deg)
+d2d       = np.array([x.degree for x in d2d])
+
+pl.hist(d2d, bins=50, alpha=0.5)
+pl.xlabel('Tycho separation [deg.]')
+pl.savefig('tycho.png')
+pl.clf()
+
+##
+idxc, idxcatalog, d2d, d3d = clgal.search_around_sky(cassigned[::1000], 3. * u.deg)
+d2d       = np.array([x.degree for x in d2d])
+
+pl.hist(d2d, bins=50, alpha=0.5)
+pl.xlabel('LSLGA separation [deg.]')
+pl.savefig('LSLGA.png')
+pl.clf()
+
+##                                                                                                                                                                                       
+idxc, idxcatalog, d2d, d3d = cngcsc.search_around_sky(cassigned, 3. * u.deg)                                                                                                     
+d2d       = np.array([x.degree for x in d2d])
+pl.hist(d2d, bins=50, alpha=0.5)
+pl.xlabel('NGCSC separation [deg.]')
+pl.savefig('NGCSC.png')    
+pl.clf()

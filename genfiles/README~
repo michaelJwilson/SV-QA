@@ -1,0 +1,27 @@
+Masks.
+  --  Make GAIA star mask catalogue with make_gaia.py
+      /masks/
+
+Targets.
+  --  Split .mtl with mtl_bytile.
+      /mtls/
+
+Assigned. 
+  --  Get assigned targets with get_assigned.py
+      /fiberassign/ 
+
+Truth.
+  --  Copy necessary truth cats. to scratch with get_truth.py
+      /truth/
+      /truth/legacy
+    
+  --  Standardise RA, DEC and Z columns with standardise_truth.py & standardise_truth_im.py
+      /truth/standard/
+
+      Note:  the above truth files are line matched. 
+
+  --  Get assigned truth with assigned_truth.py
+      /truth/assigned/
+
+  --  Split assigned truth by tile with assigned_truth_bytile.
+      /truth/assigned/bytile/
