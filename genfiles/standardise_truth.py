@@ -8,12 +8,13 @@ from   astropy.table    import  Table
 from   astropy          import  constants as const
 
 
+##  Only standardise the spectroscopic aspect, LS half is fine.  
 files = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/*.fits')
 
 for _file in files:
   dat          = Table(fits.open(_file)[1].data)
-  survey       = _file.split('/')[-1].split('.')[0]
-  
+  survey       = _file.split('/')[-1].split('.fits')[0]
+
   if survey in ['6dFGS-north', '6dFGS-south']:
     dat['RA']    = dat['RAJ2000']
     dat['DEC']   = dat['DEJ2000']
@@ -106,6 +107,26 @@ for _file in files:
     ##  print(dat)
     dat['ZERR']  = -99. * np.ones_like(dat['Z'])
     dat['ZWARN'] = -99. * np.ones_like(dat['Z'])
+
+  elif survey in ['hsc_pdr1_deep.forced.reduced-north', 'hsc_pdr1_deep.forced.reduced-south', 'hsc_pdr1_udeep.forced.reduced-north', 'hsc_pdr1_udeep.forced.reduced-south',\
+                  'hsc_pdr1_wide.forced.reduced-north', 'hsc_pdr1_wide.forced.reduced-south']:    
+    ##                                                                                                                                                                                                                                
+    dat['RA']    = dat['ra']
+    dat['DEC']   = dat['dec']
+    dat['Z']     = dat['frankenz_photoz_best']
+    dat['ZERR']  = -99. * np.ones_like(dat['Z'].quantity)
+    dat['ZWARN'] = -99  * np.ones_like(dat['Z'].quantity, dtype=np.int)
+
+    '''                                                                                                                                                                                                  
+    a_g          = 1.155636 * (1 - MW_TRANSMISSION_G) - 0.001767                                                                                                                                        
+    a_r          = 0.818918 * (1 - MW_TRANSMISSION_G) - 0.001252                                                                                                                                          
+    a_i          = 0.584431 * (1 - MW_TRANSMISSION_G) - 0.000893                                                                                                                                                
+    a_z          = 0.450745 * (1 - MW_TRANSMISSION_G) - 0.000689                                                                                                                                       
+    a_y          = 0.384616 * (1 - MW_TRANSMISSION_G) - 0.000588                                                                                                                                      
+    '''
+
+    del  dat['ra']
+    del  dat['dec']
     
   else:
     print('Error.')
@@ -117,7 +138,7 @@ for _file in files:
     exit(1)
 
 
-  fout  = _file.split('.')
+  fout  = _file.split('.fits')
   fout  = fout[0] + '-standard.fits'
 
   fout  = fout.split('/')

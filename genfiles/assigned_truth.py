@@ -36,18 +36,15 @@ for _file in files:
 
   if survey in ['hsc_pdr1_wide', 'hsc_pdr1_deep', 'hsc_pdr1_udeep']:
     survey = _file.split('/')[-1]
-
-    print(survey)
-                
-    exit(1)
-                
+    survey = survey.split('.fits')[0]
+        
   print('Solving for {}'.format(survey))
   
   if compute:
-    ##  Spectroscopic.                                                                                                                                                                                                               
+    ##  Spectroscopic.
     dat          = Table(fits.open(_file)[1].data, meta={'name': survey})['Z', 'ZERR', 'ZWARN']  ##  ['RA', 'DEC']
 
-    legacy       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/legacy/ls-' + survey + '.fits'
+    legacy       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/legacy/ls-' + survey.replace('-standard', '') + '.fits'
     legacy       = Table(fits.open(legacy)[1].data)
 
     ##  Line matched.
@@ -59,18 +56,16 @@ for _file in files:
 
     ##  print(legacy.columns)
     
-    matched      = join(_assigned, legacy, keys=['BRICKID', 'BRICK_OBJID'])
+    matched      = join(_assigned, legacy, keys=['BRICKID', 'BRICK_OBJID'], join_type='inner')
   
     ##  print(len(targetids), np.sum(isin))
      
-    ##  print('\n\n{}\n'.format(survey))
-    ##  print(legacy)
-    print(matched)
-
     if len(matched) == 0:
       continue
 
-    matched.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey + '.fits', format='fits', overwrite=True)
+    print(matched)
+    
+    matched.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey.replace('-standard', '') + '.fits', format='fits', overwrite=True)
 
   else:
     matched    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey +'.fits')[1].data)
@@ -113,7 +108,7 @@ for ax in [ax1, ax2, ax3, ax4]:
   
 plt.tight_layout()
   
-pl.savefig('spec_truth.png')
+pl.savefig('../plots/spec_truth.png')
 
 print('\n\nDone.\n\n')
 

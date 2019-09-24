@@ -8,15 +8,16 @@ from    desitarget.targetmask import  load_mask_bits
 
 
 ##  https://desi.lbl.gov/trac/wiki/TargetSelectionWG/TargetingTruthTables/MatchedTruthCatalogs
+##  Copy desired truth catalogues to scratch. 
+
 scratch   = os.environ['CSCRATCH']
 truthdir  = '/project/projectdirs/desi/target/analysis/truth/dr8.0/'
 
 _all      = ['2dFGRS-match.fits', '6dFGS-match.fits', '2dflens-match.fits', 'GAMA-DR3-SpecObj-match.fits', 'OzDES-DR1-match.fits',\
              'VIPERS_W1_SPECTRO_PDR2-match.fits', 'VIPERS_W4_SPECTRO_PDR2-match.fits', 'ages_reduced-match.fits',\
-             'sdss-specObj-dr14-unique-trimmed-match.fits', 'hsc_pdr1_deep.forced.reduced-match.fits', 'hsc_pdr1_wide.forced.reduced-match.fits',\
-             'hsc_pdr1_udeep.forced.reduced-match.fits']
+             'sdss-specObj-dr14-unique-trimmed-match.fits']
 
-_all      = ['hsc_pdr1_deep.forced.reduced-match.fits', 'hsc_pdr1_wide.forced.reduced-match.fits', 'hsc_pdr1_udeep.forced.reduced-match.fits']
+_all     += ['hsc_pdr1_deep.forced.reduced-match.fits', 'hsc_pdr1_wide.forced.reduced-match.fits', 'hsc_pdr1_udeep.forced.reduced-match.fits']
 
 ##  Writes desired truth catalogues to scratch.
 for i, survey in enumerate(_all):

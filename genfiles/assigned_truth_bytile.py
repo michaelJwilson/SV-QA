@@ -42,7 +42,7 @@ for _file in files:
     
     splits = _file.split('/')
     fname  = '/'.join(x for x in splits[:-1])
-    tail   = '/' + splits[-1].split('.')[0]
+    tail   = '/' + splits[-1].split('.fits')[0]
   
     ##  Unique TILEIDS.
     utiles     = np.unique(truth['TILEID'].quantity)
@@ -51,5 +51,6 @@ for _file in files:
       out  = truth[truth['TILEID'] == _tile]
 
       print('Writing {} ...'.format(fname + '/bytile/' + tail + '_{:06d}.fits'.format(_tile)))
-      
-      out.write(fname + '/bytile/' + tail + '_{:06d}.fits'.format(_tile), format='fits', overwrite=True)
+
+      if len(out) > 0:
+        out.write(fname + '/bytile/' + tail + '_{:06d}.fits'.format(_tile), format='fits', overwrite=True)

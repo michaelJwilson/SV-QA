@@ -26,46 +26,49 @@ from    desimodel.footprint    import  pix2tiles, find_tiles_over_point, is_poin
 _file      = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')
 tiles      = Table(_file[1].data)['AIRMASS', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEFRAC_GRZ', 'TILEID', 'RA', 'DEC']
 
+##  ['tycho', 'gaia']     
+survey     = 'tycho'
+
 ##
 scratch    = os.environ['CSCRATCH']
-_sv_mtl    = fits.open(scratch + '/BGS/SV-ASSIGN/tiles/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits')
-sv_mtl     = Table(_sv_mtl[1].data)
+
+gaia       = fits.open(scratch + '/BGS/SV-ASSIGN/masks/{}_stellar_mask.fits'.format(survey))
+gaia       = Table(gaia[1].data)
+
+print(gaia)
 
 ##
 nside      = 64
 
-(indesi, tindex)          = is_point_in_desi(tiles, sv_mtl['RA'].quantity.value, sv_mtl['DEC'].quantity.value, return_tile_index=True)
+(indesi, tindex)          = is_point_in_desi(tiles, gaia['RA'], gaia['DEC'], return_tile_index=True)
 
 ##  Prevent 'duplication' of e.g. RA cols after join. 
 del tiles['RA']
 del tiles['DEC']
 
 ##  Some objects in the .mtl are not in the tiles;  rough cut on creation I guess. 
-sv_mtl['TILEID']          = -99 * np.ones_like(sv_mtl['RA'].quantity.value, dtype=np.int)
-sv_mtl['TILEID'][indesi]  = tiles['TILEID'].quantity[tindex[indesi]]
-sv_mtl.sort('TILEID')
-  
-##  Not associated to a tile?
-##  notin = sv_mtl[sv_mtl['TILEID'] < 0]
-##  notin.sort('DEC')
-##  print(notin)
+gaia['TILEID']          = -99 * np.ones_like(gaia['RA'].quantity.value, dtype=np.int)
+gaia['TILEID'][indesi]  = tiles['TILEID'].quantity[tindex[indesi]]
+gaia.sort('TILEID')
 
-##  pl.plot(notin['RA'], notin['DEC'], c='k', marker='.', lw=0, markersize=1)
-##  pl.show()
+print(gaia)
 
 ##  Only keep the targets in a given tile. 
-sv_mtl     = sv_mtl[sv_mtl['TILEID'] > 0]
-sv_mtl     = join(sv_mtl, tiles, keys=['TILEID'], join_type='left')
+gaia     = gaia[gaia['TILEID'] > 0]
+gaia     = join(gaia, tiles, keys=['TILEID'], join_type='left')
 
 ##  Unique TILEIDS.
-utiles     = np.unique(sv_mtl['TILEID'].quantity)
+utiles     = np.unique(gaia['TILEID'].quantity)
 
 for _tile in utiles:
-  fname    = scratch + '/BGS/SV-ASSIGN/svmtl_{:06d}.fits'.format(_tile)
-  tile_cut = sv_mtl[sv_mtl['TILEID'] == _tile]
+  fname    = scratch + '/BGS/SV-ASSIGN/masks/{}_{:06d}.fits'.format(survey, _tile)
 
-  print(tile_cut)
-  
-  tile_cut.write(fname, format='fits', overwrite=True)
+  if not os.path.exists(fname):
+    tile_cut = gaia[gaia['TILEID'] == _tile]
+
+    print(tile_cut)
+
+    if len(tile_cut) > 0:
+      tile_cut.write(fname, format='fits', overwrite=True)
 
 print('\n\nDone.\n\n')

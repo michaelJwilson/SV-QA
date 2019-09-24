@@ -1,3 +1,6 @@
+ROOT
+      /global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN
+
 Masks.
   --  Make GAIA star mask catalogue with make_gaia.py
       /masks/
@@ -18,12 +21,12 @@ Truth.
   --  Standardise RA, DEC and Z columns with standardise_truth.py & standardise_truth_im.py
       /truth/standard/
 
-      Note:  the above truth files are line matched. 
+      Note:  the above truth files are line matched to /truth/.  No need to standardise LS.  
 
   --  Get assigned truth with assigned_truth.py
       /truth/assigned/
 
-      Note:  combined with redshift and legacy columns.
+      Note:  combined with standardised redshift and legacy columns. 
 
   --  Split assigned truth by tile with assigned_truth_bytile.
       /truth/assigned/bytile/
