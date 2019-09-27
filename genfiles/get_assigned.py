@@ -10,19 +10,21 @@ from   desiutil.bitmask       import  BitMask
 from   desimodel.io           import  load_desiparams, load_platescale
 
 
-scratch  = os.environ['CSCRATCH']
+scratch      = os.environ['CSCRATCH']
 
-tiles    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')[1].data)
-utiles   = np.unique(tiles['TILEID'].quantity)
+tiles        = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')[1].data)
+utiles       = np.unique(tiles['TILEID'].quantity)
 
-result   = Table(names=['TARGETID', 'FA_TYPE', 'BRICK_OBJID', 'TARGET_RA', 'TARGET_DEC', 'BRICKID'], dtype=('i8', 'i1', 'i4', 'f8', 'f8', 'i4'))
+result       = Table(names=['TARGETID', 'FA_TYPE', 'BRICK_OBJID', 'TARGET_RA', 'TARGET_DEC', 'BRICKID'], dtype=('i8', 'i1', 'i4', 'f8', 'f8', 'i4'))
 
-##                                                                                                                                                                                                                                      
-_bitdefs = load_mask_bits("sv1")
-bgs_mask = BitMask('sv1_bgs_mask', _bitdefs)
+##
+_bitdefs     = load_mask_bits("sv1")
 
-types    =  bgs_mask.names()
-bits     = [bgs_mask.bitnum(x) for x in types]
+desi_mask    = BitMask('sv1_desi_mask', _bitdefs)
+bgs_mask     = BitMask('sv1_bgs_mask',  _bitdefs)
+
+types        =  bgs_mask.names()
+bits         = [bgs_mask.bitnum(x) for x in types]
 
 ##  L428 of https://github.com/desihub/desimodel/blob/master/py/desimodel/focalplane/geometry.py
 params       =  load_desiparams()
@@ -38,11 +40,18 @@ for tile in utiles:
   ##  cmd = 'wget http://www.astro.utah.edu/~u6022465/SV/tiles/SV_BGS/fits_files/tile-{:06}.fits -O /global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile, tile)
   ##  os.system(cmd)
 
-  _fits  = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile))
+  _fits   = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile))
   
-  dat    = Table(_fits[1].data)['TARGETID', 'FA_TYPE', 'BRICK_OBJID', 'TARGET_RA', 'TARGET_DEC', 'BRICKID', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET', 'DESIGN_X','DESIGN_Y']
-  result = vstack([result, dat])
+  dat     = Table(_fits[1].data)['TARGETID', 'FA_TYPE', 'BRICK_OBJID', 'TARGET_RA', 'TARGET_DEC', 'BRICKID', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET', 'BGS_TARGET', 'DESIGN_X','DESIGN_Y', 'DESI_TARGET']
+  
+  result  = vstack([result, dat])
 
+  isbgs   = ((dat['SV1_DESI_TARGET'] & 2 ** desi_mask.bitnum('BGS_ANY')) != 0)
+
+  ##  BRIGHT_OBJECT, IN_BRIGHT_OBJECT, NEAR_BRIGHT_OBJECT. 
+  ##  exclude = (dat['SV1_DESI_TARGET'] & desi_mask.mask('BRIGHT_OBJECT') != 0) | (dat['SV1_DESI_TARGET'] & desi_mask.mask('IN_BRIGHT_OBJECT') != 0) | (dat['SV1_DESI_TARGET'] & desi_mask.mask('NEAR_BRIGHT_OBJECT') != 0)
+  exclude = (dat['SV1_DESI_TARGET'] & desi_mask.mask('BRIGHT_OBJECT|IN_BRIGHT_OBJECT|NEAR_BRIGHT_OBJECT') != 0)
+    
   ##  print(dat.columns)
   ##  print(result)
 
@@ -73,46 +82,49 @@ for tile in utiles:
   
   ##  https://github.com/legacysurvey/decals-web/blob/master/templates/index.html#L1080
   ##  https://github.com/legacysurvey/decals-web/blob/master/templates/index.html#L593
-  viewer['color']        = Column(data = ['white']  * len(dat), dtype='S16', length=len(dat))
+  viewer['color']        = Column(data = ['black']  * len(dat), dtype='S16', length=len(dat))
   ##  viewer['border-style'] = Column(data = ['dashed'] * len(dat), dtype='S16', length=len(dat))
   ##  viewer['opacity']      = 0.3
   viewer['radius']       = geomean
   viewer['lineWidth']    = 2.
+  viewer['name']         = ''
   
   ##  print(viewer)
 
   ##  FA_TYPE definition:  https://github.com/desihub/fiberassign/blob/master/src/targets.h#L28
-  ##  
-  ##  Standards.  
-  viewer['color'][(dat['FA_TYPE'] & 2 ** 0) != 0] = 'acqua'
-  
-  ##  Sky.
-  viewer['color'][(dat['FA_TYPE'] & 2 ** 1) != 0] = 'blue'
+  ##
+  ##  --  Skies and Standards --                                                                                                                                                                            
+  viewer['color'][(dat['DESI_TARGET'] & 2 ** desi_mask.bitnum('BAD_SKY'))         != 0 ]  = 'teal'
+  viewer['color'][(dat['DESI_TARGET'] & 2 ** desi_mask.bitnum('SKY'))             != 0 ]  = 'blue'
+  viewer['color'][(dat['SV1_DESI_TARGET'] & 2 ** desi_mask.bitnum('MWS_ANY')  )   != 0 ]  = 'acqua'
+  viewer['color'][(dat['SV1_DESI_TARGET'] & 2 ** desi_mask.bitnum('STD_WD')  )    != 0 ]  = 'white'
+  viewer['color'][(dat['SV1_DESI_TARGET'] & 2 ** desi_mask.bitnum('STD_BRIGHT'))  != 0 ]  = 'lime'
 
   ##  Safe.
-  viewer['color'][(dat['FA_TYPE'] & 2 ** 2) != 0] = 'Fuchsia'
+  viewer['color'][(dat['FA_TYPE'] & 2 ** 3) != 0]                                         = 'Fuchsia'
   
   ##
   ##  --  Science --
   ##
   ##  Note:  reverse order to expected redshift success (previous colors overwritten for overlap.)
   ##
-  ##  BGS_LOWQ                                                                                                                                                                                                     
-  viewer['color'][(dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_LOWQ'))      != 0 ]  = 'purple'
+  ##  BGS_LOWQ
+  viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_LOWQ'))      != 0)]  = 'purple'
 
   ##  BGS_FAINT_EXT                                                                                                                                                                                               
-  viewer['color'][(dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FAINT_EXT')) != 0 ]  = 'maroon'
+  viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FAINT_EXT')) != 0)]  = 'maroon'
 
   ##  BGS_FIBMAG                                                                                                                                                                                                  
-  viewer['color'][(dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FIBMAG'))    != 0 ]  = 'green'
+  viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FIBMAG'))    != 0)]  = 'green'
 
   ##  BGS_FAINT                                                                                                                                                                                                   
-  viewer['color'][(dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FAINT'))     != 0 ]  = 'silver'
+  viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_FAINT'))     != 0)]  = 'silver'
   
   ##  BGS_BRIGHT      
-  viewer['color'][(dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_BRIGHT'))    != 0 ]  = 'yellow'
+  viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_BRIGHT'))    != 0)]  = 'yellow'
 
-  print(viewer)
+  if len(dat[viewer['color'] == 'black']) > 0:
+    print( dat[viewer['color'] == 'black'])
   
   try:
     ##  Append mask sources.
@@ -123,7 +135,8 @@ for tile in utiles:
     mviewer['radius']    = mviewer['MRADIUS']
     mviewer['color']     = Column(data = ['red']  * len(mask), dtype='S16', length=len(mask))    
     mviewer['lineWidth'] = 2.
-  
+    mviewer['name']      = ''
+    
     del mviewer['MRADIUS']
   
     viewer = vstack([viewer, mviewer])
@@ -133,27 +146,59 @@ for tile in utiles:
 
     
   try:
-    ##  Append mask sources.                                                                                                                                                                                     
-    _fits   = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/gaia_{:06}.fits'.format(tile))
-    mask    = Table(_fits[1].data)
-
+    ##  Append mask sources.                                                                                                                                                                                    
+    _fits                = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/gaia_{:06}.fits'.format(tile))
+    mask                 = Table(_fits[1].data)
+    mask                 = mask[mask['ISBRIGHT'] == True]
+    
     mviewer              = mask['RA', 'DEC', 'MRADIUS']
     mviewer['radius']    = mviewer['MRADIUS']
     mviewer['color']     = Column(data = ['red']  * len(mask), dtype='S16', length=len(mask))
     mviewer['lineWidth'] = 2.
-
+    mviewer['name']      = ''
+    
     del mviewer['MRADIUS']
 
     viewer = vstack([viewer, mviewer])
 
   except:
     print('Unable to retrieve Tycho mask for Tile {}'.format(tile))
+
+  try:
+    randoms = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/randoms/randoms_{:06}.fits'.format(tile))[1].data)
+    isin    = (randoms['MASKBITS'] & 2**1) != 0
+    randoms = randoms[isin]
+
+    mviewer = randoms['RA', 'DEC']
+
+    mviewer['color'] = Column(data = ['red']  * len(randoms), dtype='S16', length=len(randoms))
+    mviewer['name']  = ''
+
+    viewer  = vstack([viewer, mviewer])
+
+  except:
+    print('Unable to retrieve randoms for Tile {}'.format(tile))
     
+  try:
+    clouds           = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/clouds/clouds_{:06}.fits'.format(tile))[1].data)
+
+    mviewer          = clouds['RA', 'DEC']
+    mviewer['color'] = Column(data = ['lime']  * len(clouds), dtype='S16', length=len(clouds))
+    mviewer['name']  = Column(data = clouds['NAME'], dtype='S16', length=len(clouds))
+
+    viewer           = vstack([viewer, mviewer])
+
+  except:
+    print('Unable to retrieve molecular clouds for Tile {}'.format(tile))
+  
   viewer.write('/project/projectdirs/desi/www/users/mjwilson/SV-ASSIGN/tile-{:06}.fits'.format(tile), format='fits', overwrite=True)
-    
+
+  
 ##  Complete catalogue. 
 result.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/assigned_targets.fits', format='fits', overwrite=True)
 
 ##  Set permissions on viewer files.
 os.system('chmod --reference=/project/projectdirs/desi/www/users/mjwilson/plots/visibility-nofullmoon-26-0.pdf /project/projectdirs/desi/www/users/mjwilson/SV-ASSIGN/*')
 
+print('Number of safe: {}'.format(len(result[result['FA_TYPE'] == 4])))
+print('\n\nDone.\n\n')

@@ -1,0 +1,149 @@
+from   __future__        import  with_statement
+
+import sys
+import copy
+import glob
+import random
+import contextlib
+import matplotlib;  matplotlib.use('pdf')
+import numpy              as       np
+import pylab              as       pl
+import matplotlib.pyplot  as       plt
+import astropy.io.fits    as       fits
+import astropy.units      as       u
+
+from   astropy.table      import  Table, join, hstack
+from   astropy            import  constants as const
+from   desitarget.geomask import  circles
+
+try:
+    from urllib.parse import urlencode
+
+except ImportError:
+    from urllib import urlencode
+
+try:
+    from urllib.request import urlopen
+
+except ImportError:
+    from urllib2 import urlopen
+
+plt.style.use('dark_background')
+
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+plt.rc('text.latex', preamble=r'\usepackage{hyperref}')
+
+##  plt.rcParams['pgf.preamble'] = [r'\usepackage{hyperref}']
+
+def make_tiny(url):
+  request_url = ('http://tinyurl.com/api-create.php?' + 
+  urlencode({'url':url}))
+
+  with contextlib.closing(urlopen(request_url)) as response:
+    return response.read().decode('utf-8').split('//')[1]
+
+##
+nrow       = 4
+ncol       = 5
+
+rasterized = False
+
+##  
+fig, axarr = plt.subplots(nrows=nrow, ncols=ncol, figsize=(35, 35))
+
+tiles      = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')[1].data)
+
+tiles.sort('EBV_MED')
+##  print(tiles)
+ext_ebv    = tiles['TILEID', 'EBV_MED']
+ext_ebv    = ext_ebv[-5:]
+print(ext_ebv)
+
+tiles.sort('STAR_DENSITY')
+##  print(tiles)
+ext_star   = tiles['TILEID', 'STAR_DENSITY']
+ext_star   = ext_star[-5:]
+print(ext_star)
+
+tiles.sort('IMAGEFRAC_GRZ')
+##  print(tiles)
+ext_grz    = tiles['TILEID', 'IMAGEFRAC_GRZ']
+ext_grz    = ext_grz[:5]
+print(ext_grz)
+
+tiles['BRIGHT_VT'] = np.array([np.min(x) for x in tiles['BRIGHTVTMAG']])
+tiles.sort('BRIGHT_VT')
+##  print(tiles)
+ext_vt     = tiles['TILEID', 'BRIGHT_VT']
+ext_vt     = ext_vt[:5]
+print(ext_vt)
+
+##
+labels     = ['EBV_MED', 'STAR_DENSITY', 'IMAGEFRAC_GRZ', 'BRIGHT_VT']
+
+for row, extreme in enumerate([ext_ebv, ext_star, ext_grz, ext_vt]):
+ print('Solving for {}.'.format(labels[row]))
+
+ ids       = np.array(extreme['TILEID'])
+
+ axarr[row][0].text(0.05, 0.05, labels[row].replace('_', ' '), transform=axarr[row][0].transAxes, fontsize=9)
+
+ print(extreme)
+ 
+ for i, _id in enumerate(ids):  
+  col      = i % 5
+
+  try:
+    ##  Assigned truth with legacy columns.
+    _file    = '/project/projectdirs/desi/www/users/mjwilson/SV-ASSIGN/tile-{:06}.fits'.format(_id)  
+    dat      = Table(fits.open(_file)[1].data)
+
+  except:
+    continue  
+    
+  legacys  = '/project/projectdirs/desi/www/users/mjwilson/SV-TARGETS/tile-targets-{:06}.fits'.format(_id)
+  legacys  = Table(fits.open(legacys)[1].data)
+
+  label    = '{:.3f}'.format(extreme[np.array(extreme['TILEID']) == _id][labels[row]].quantity[0]).replace('_', ' ')
+
+  axarr[row][col].text(0.85, 0.05, label, transform=axarr[row][col].transAxes, fontsize=9)
+  
+  if len(dat) > 0:
+    axarr[row][col].scatter(dat['RA'].quantity, dat['DEC'].quantity, s=1, rasterized=rasterized, alpha=0.0, marker='.')
+
+    xlim = axarr[row][col].get_xlim()
+    ylim = axarr[row][col].get_ylim()
+  
+    axarr[row][col].scatter(legacys['RA'], legacys['DEC'], s=1, rasterized=rasterized, alpha=0.3, marker='.', c='white') 
+
+    ##
+    axarr[row][col].scatter(dat['RA'], dat['DEC'], s=1, rasterized=rasterized, alpha=.3, marker='.', c='gold')
+
+    axarr[row][col].set_xlim(xlim[1] + .1, xlim[0] - .1)
+    axarr[row][col].set_ylim(ylim[0] - .1, ylim[1] + .1)
+  
+    ##  Hyperlink title.
+    _t    = tiles[tiles['TILEID'] == np.int(_id)] 
+    ra    = _t['RA'].quantity[0]
+    dec   = _t['DEC'].quantity[0]
+
+    hlink = r'http://legacysurvey.org/viewer?ra={:.4f}&dec={:.4f}&layer=dr8&zoom=12&desifiber={:.4f},{:.4f}'.format(ra, dec, ra, dec)
+
+    ##  wlink = r'http://www.astro.utah.edu/~u6022465/SV/tiles/SV_BGS/fits_files/tile-{}.fits'.format(tile)
+    tlink = r'https://portal.nersc.gov/project/desi/users/mjwilson/SV-TARGETS/tile-targets-{:06d}.fits'.format(_id)
+
+    alink = r'https://portal.nersc.gov/project/desi/users/mjwilson/SV-ASSIGN/tile-{:06d}.fits'.format(_id)
+    
+    ##  print(hlink)
+
+    axarr[row][col].set_title('Tile:  {}\n'.format(_id) + r'\url{%s}' % make_tiny(hlink) + '        ' r'\url{%s}' % make_tiny(tlink) + '        ' + r'\url{%s}' % make_tiny(alink), fontsize=10)
+
+    axarr[row][col].text(0.05, 0.05, labels[row])
+ 
+##  
+plt.tight_layout()
+
+pl.savefig('extreme_tiles.png')
+
+print('\n\nDone.\n\n')
