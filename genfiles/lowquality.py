@@ -72,59 +72,10 @@ for tile in utiles:
   viewer['name']         = Column(data = ['']  * len(dat), dtype='S18', length=len(dat))
 
   ##  BGS_LOWQ                                                                                                                                                                                                                          
+  viewer['radius'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_LOWQ'))     != 0)]  =     1.8
   viewer['color'][~exclude & ((dat['SV1_BGS_TARGET'] & 2 ** bgs_mask.bitnum('BGS_LOWQ'))      != 0)]  = 'purple'
-
-
-    ##  Append mask sources.                                                                                                                                                                                     
-    _fits   = fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/gaia_{:06}.fits'.format(tile))
-    mask    = Table(_fits[1].data)
-
-    mviewer              = mask['RA', 'DEC', 'MRADIUS']
-    mviewer['radius']    = mviewer['MRADIUS']
-    mviewer['color']     = Column(data = ['red']  * len(mask), dtype='S16', length=len(mask))
-    mviewer['lineWidth'] = 2.
-    mviewer['name']      = ''
     
-    del mviewer['MRADIUS']
-
-    viewer = vstack([viewer, mviewer])
-
-  except:
-    print('Unable to retrieve Tycho mask for Tile {}'.format(tile))
-
-  try:
-    randoms = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/randoms/randoms_{:06}.fits'.format(tile))[1].data)
-    isin    = (randoms['MASKBITS'] & 2**1) != 0  
-    randoms = randoms[isin]
-
-    mviewer          = randoms['RA', 'DEC']
-
-    mviewer['RA']    = mviewer['RA']
-    mviewer['DEC']   = mviewer['DEC']
-  
-    mviewer['color'] = Column(data = ['red']  * len(randoms), dtype='S16', length=len(randoms))
-    mviewer['name']  = ''
-  
-    viewer  = vstack([viewer, mviewer])
-
-  except:
-    print('Unable to retrieve randoms for Tile {}'.format(tile))
-    
-  try:
-    clouds           = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/clouds/clouds_{:06}.fits'.format(tile))[1].data)
-
-    mviewer          = clouds['RA', 'DEC']    
-    mviewer['color'] = Column(data = ['lime']  * len(clouds), dtype='S16', length=len(clouds))
-    mviewer['name']  = Column(data = clouds['NAME'], dtype='S16', length=len(clouds))
-
-    print(mviewer)
-    
-    viewer           = vstack([viewer, mviewer])
-
-  except:
-    print('Unable to retrieve molecular clouds for Tile {}'.format(tile))    
-    
-  viewer.write('/project/projectdirs/desi/www/users/mjwilson/SV-TARGETS/tile-targets-{:06}.fits'.format(tile), format='fits', overwrite=True)
+  viewer.write('/project/projectdirs/desi/www/users/mjwilson/SV-TARGETS/tile-lowq-targets-{:06}.fits'.format(tile), format='fits', overwrite=True)
   
 ##  Set permissions on viewer files.
 os.system('chmod --reference=/project/projectdirs/desi/www/users/mjwilson/plots/visibility-nofullmoon-26-0.pdf /project/projectdirs/desi/www/users/mjwilson/SV-TARGETS/*')
