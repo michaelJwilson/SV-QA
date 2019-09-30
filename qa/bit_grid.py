@@ -241,6 +241,10 @@ for tile in utiles:
   ##  
   row   = np.array(row).astype(np.int).T
 
+  ##                                                                                                                                                                                                                                   
+  np.savetxt('bitgrid/txt/tile_{:06d}.txt'.format(tile), row, fmt='%d\t', header='\t'.join(names))
+  '''
+  ##
   batch = 25
 
   for i in range(200):  
@@ -271,8 +275,8 @@ for tile in utiles:
       tf.write(lines[-2])
       tf.write('\n')
       tf.write(lines[-1])
-          
-  break
+  '''    
+  ##  break
 
 print('\n\nDone.\n\n')
   
