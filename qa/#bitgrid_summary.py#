@@ -31,7 +31,7 @@ for i, _sky  in enumerate(skies[1:]):
   sky            = sky.append(process_df(i, _sky))
 
 for i, _file in enumerate(files[1:]):
-  df             = df.append(process_df(i, _file))
+  df             = df.appenmmd(process_df(i, _file))
 
 ##
 sky.index.name   = 'FIBER'

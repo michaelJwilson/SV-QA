@@ -36,12 +36,16 @@ load       = cols + ['TARGETID']
 sweep      = Table(fits.open(_sweeps[0])[1].data)[load]
 
 for i, _sweep in enumerate(_sweeps[1:]):
-  sweep    = vstack(sweep, Table(fits.open(_sweep)[1].data)[load])
+  _in      = Table(fits.open(_sweep)[1].data)[load]
 
-  print('{} of {}.'.format(i, len(_sweeps)))
+  sweep    = vstack(sweep, _in[load])
 
-  if i > 4:
-    break
+  print('\n\n{} of {}.'.format(i, len(_sweeps)))
+
+  print(_in)
+  
+##
+print(sweep)
   
 ##
 ##  files  = glob.glob(scratch + '/BGS/SV-ASSIGN/mtls/svmtl_*.fits')
@@ -57,7 +61,7 @@ for fname in files:
     except:
       print('Column {} not available.'.format(x))
       
-  tile     = join(tile, sweep, keys='TARGETID', join_type='left')
+  tile     = join(tile, sweep, keys='TARGETID', join_type='inner') ## 'left'
 
   print(tile)
 

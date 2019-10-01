@@ -29,6 +29,7 @@ BGS_MASKBITS['BMB_ZMRHI']       =   0x200,  # (zflux < rflux * 10**(4.0/2.5))
 BGS_MASKBITS['BMB_GRR']         =   0x400,  # (Grr > 0.6)
 BGS_MASKBITS['BMB_ZEROGAIAMAG'] =   0x800,  # (gaiagmag == 0)
 BGS_MASKBITS['BMB_PSF']         =   0x1000, # (_psflike(objtype))
+BGS_MASKBITS['BMB_AEN']         =   0x2000, # (Non-PSF by Gaia AEN)   
 
 def isBGS_colors(rflux=None, rfiberflux=None, south=True, targtype=None, primary=None):
     """
@@ -115,7 +116,7 @@ def set_BGSMASKBITS(gflux=None, rflux=None, zflux=None, gnobs=None, rnobs=None, 
                     gfracflux=None, rfracflux=None, zfracflux=None,
                     gfracin=None, rfracin=None, zfracin=None,
                     gfluxivar=None, rfluxivar=None, zfluxivar=None, Grr=None,
-                    gaiagmag=None, maskbits=None, objtype=None):
+                    gaiagmag=None, maskbits=None, objtype=None, gaia_aen=None):
     """                                                                                                                                                                                                                                 
     MASKBITS equivalents for quality cuts applied. 
     """
@@ -135,13 +136,24 @@ def set_BGSMASKBITS(gflux=None, rflux=None, zflux=None, gnobs=None, rnobs=None, 
     result[~ (zflux > rflux * 10**(-1.0/2.5))]                                  += BGS_MASKBITS['BMB_ZMRLO']
     result[~ (zflux < rflux * 10**(4.0/2.5))]                                   += BGS_MASKBITS['BMB_ZMRHI']
 
-    result[~ (Grr > 0.6)]                                                       += BGS_MASKBITS['BMB_GRR']
-    result[~ (gaiagmag == 0)]                                                   += BGS_MASKBITS['BMB_ZEROGAIAMAG']
-    result[  (_psflike(objtype))]                                               += BGS_MASKBITS['BMB_PSF']
+    result[  ((gaiagmag > 0.0) & (Grr   <= 0.6))]                               += BGS_MASKBITS['BMB_GRR']
+    result[~ (gaiagmag == 0.0)]                                                 += BGS_MASKBITS['BMB_ZEROGAIAMAG']
+    result[~ (~_psflike(objtype))]                                              += BGS_MASKBITS['BMB_PSF']
+
+
+    ispsf_byaen    = (gaiagmag < 18) & (gaia_aen < 10. ** 0.5)
+    ispsf_byaen    = ispsf_byaen | ((gaiagmag >= 18) & (gaia_aen < 10. ** (0.5 + 0.2 * (gaiagmag - 18.))))    
+
+    ##  Is is GAIA to start. 
+    ispsf_byaen    = ispsf_byaen & (gaiagmag > 0.0)
+
+    result[ispsf_byaen]                                                         += BGS_MASKBITS['BMB_AEN']
     
     return  result
 
 ##  
+applyto   = 'assign'
+
 scratch   = os.environ['CSCRATCH']
 
 tiles     = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/BGS_SV_30_3x_superset60_Sep2019.fits')[1].data)
@@ -158,7 +170,7 @@ names     = []
 names    += ['WD', 'STD FNT', 'STD BRT', 'MWS', 'BGS', 'LRG', 'LRG INIT', 'LRG SUPER', 'LRG LOZ', 'ELG', 'QSO', 'SCD']
 names    += ['BRT', 'FNT', 'FEXT', 'FMAG', 'LOQ']
 names    += ['MEDIUM', 'LSLGA', 'SCLUSTER']
-names    += ['NOBS', 'FMASK', 'FFLUX', 'FIN', 'IVAR', 'BMASK', 'RMGLO', 'RMGHI', 'ZMRLO', 'ZMRHI', 'GRR', 'GG', 'PSF']
+names    += ['NOBS', 'FMASK', 'FFLUX', 'FIN', 'IVAR', 'BMASK', 'RMGLO', 'RMGHI', 'ZMRLO', 'ZMRHI', 'GRR', 'GG', 'PSF', 'AEN PSF']
 names    += ['BPIX', 'STR', 'BLEED', 'EDGE', 'OLIER']
 
 print('\n\nWelcome.\n\n')
@@ -170,19 +182,39 @@ for ii, tile in enumerate(utiles):
   try:
     print('Solving for Tile {} ({} of {}).'.format(tile, ii, len(utiles)))
 
-    fname = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile)
-    _fits = fits.open(fname)  
-    dat   = Table(_fits[1].data)  ##  ['FIBER', 'DESI_TARGET', 'BGS_TARGET', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET']
+    if applyto == 'assign':
+      fname = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile)
 
-    sweep = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/sweeps/tile-{:06}.fits'.format(tile)
-    
-    ##
-    dat.sort('FIBER')
-    
+    elif applyto == 'targets':
+      fname = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/mtls/svmtl_{:06}.fits'.format(tile)
+
+    else:
+      raise  ValueError('Must apply to either assign or targets.') 
+      
+    _fits = fits.open(fname)  
+        
   except:
     print('Unable to retrieve {}.'.format(fname))
     continue
 
+  ##  
+  dat   = Table(_fits[1].data)  ##  ['FIBER', 'DESI_TARGET', 'BGS_TARGET', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET'] 
+
+  ##  print(dat.columns)                                                                                                                                                                                                          
+
+  ##  Remove skies.                                                                                                                                                                                                               
+  isin  = np.ones(len(dat), dtype=bool)
+
+  for x in ds_dtypes:
+    isin = isin & ((dat['DESI_TARGET'] & desi_mask.mask(x)) == 0)
+
+  skies = dat[~isin]
+  dat   = dat[ isin]
+
+  ##                                                                                                                                                                                                                              
+  dat.sort('FIBER')
+
+  ##
   ttypes        = ['faint', 'bright', 'faint_ext', 'lowq', 'fibmag']
   
   dat['GFLUX']  = dat['FLUX_G'] / dat['MW_TRANSMISSION_G']
@@ -199,7 +231,7 @@ for ii, tile in enumerate(utiles):
   dat['BGS_MASKBITS'] = set_BGSMASKBITS(gnobs=dat['NOBS_G'], rnobs=dat['NOBS_R'], znobs=dat['NOBS_Z'], primary=None, gfracmasked=dat['FRACMASKED_G'], rfracmasked=dat['FRACMASKED_R'], zfracmasked=dat['FRACMASKED_Z'],\
                                         gfracflux=dat['FRACFLUX_G'], rfracflux=dat['FRACFLUX_R'], zfracflux=dat['FRACFLUX_Z'], gfracin=dat['FRACIN_G'], rfracin=dat['FRACIN_R'], zfracin=dat['FRACIN_Z'],\
                                         gfluxivar=dat['FLUX_IVAR_G'], rfluxivar=dat['FLUX_IVAR_R'], zfluxivar=dat['FLUX_IVAR_Z'], Grr=dat['Grr'], gaiagmag=dat['GAIA_PHOT_G_MEAN_MAG'], maskbits=dat['MASKBITS'],\
-                                        objtype=dat['OBJTYPE'], gflux=dat['GFLUX'], rflux=dat['RFLUX'], zflux=dat['ZFLUX'])
+                                        objtype=dat['MORPHTYPE'], gflux=dat['GFLUX'], rflux=dat['RFLUX'], zflux=dat['ZFLUX'], gaia_aen=dat['GAIA_ASTROMETRIC_EXCESS_NOISE'])
   
   ##
   color_cut           = np.zeros_like(dat['RFLUX'], dtype=bool)
@@ -213,9 +245,7 @@ for ii, tile in enumerate(utiles):
     in_mask     = in_mask | notinBGS_mask(gnobs=dat['NOBS_G'], rnobs=dat['NOBS_R'], znobs=dat['NOBS_Z'], primary=None, gfracmasked=dat['FRACMASKED_G'], rfracmasked=dat['FRACMASKED_R'], zfracmasked=dat['FRACMASKED_Z'],\
                                           gfracflux=dat['FRACFLUX_G'], rfracflux=dat['FRACFLUX_R'], zfracflux=dat['FRACFLUX_Z'], gfracin=dat['FRACIN_G'], rfracin=dat['FRACIN_R'], zfracin=dat['FRACIN_Z'],\
                                           gfluxivar=dat['FLUX_IVAR_G'], rfluxivar=dat['FLUX_IVAR_R'], zfluxivar=dat['FLUX_IVAR_Z'], Grr=dat['Grr'], gaiagmag=dat['GAIA_PHOT_G_MEAN_MAG'], maskbits=dat['MASKBITS'],\
-                                          targtype=target, w1snr=dat['SNR_W1'], objtype=dat['OBJTYPE'], gflux=dat['GFLUX'], rflux=dat['RFLUX'], zflux=dat['ZFLUX'])
-
-  print('Mismatches between LOWQ def. and that in catalogue.')
+                                          targtype=target, w1snr=dat['SNR_W1'], objtype=dat['MORPHTYPE'], gflux=dat['GFLUX'], rflux=dat['RFLUX'], zflux=dat['ZFLUX'])
     
   for i, x in enumerate(color_cut):
     lowq = (dat['SV1_BGS_TARGET'][i]  & svbgs_mask.mask('BGS_LOWQ')) != 0
@@ -225,7 +255,7 @@ for ii, tile in enumerate(utiles):
 
     else:
         ##  Low-quality overlap with STD. BRIGHT, STD. FAINT and MWS.
-        print('\n\n{} {}'.format(lowq, x & in_mask[i]))
+        print('\n\nMismatches between LOWQ def. and that in catalogue:  {} {}'.format(lowq, x & in_mask[i]))
         
         for x in ds_dtypes:
             print(x, (dat['DESI_TARGET'][i]     &   desi_mask.mask(x)) != 0)
@@ -234,7 +264,7 @@ for ii, tile in enumerate(utiles):
             print(x, (dat['SV1_DESI_TARGET'][i]     &   svdesi_mask.mask(x)) != 0)
 
   for x in ds_dtypes:
-    skyrow.append((dat['DESI_TARGET']  & desi_mask.mask(x))   != 0)
+    skyrow.append((skies['DESI_TARGET']  & desi_mask.mask(x))   != 0)
 
   for x	in sv_dtypes:
     row.append((dat['SV1_DESI_TARGET'] & svdesi_mask.mask(x)) != 0)
@@ -257,8 +287,8 @@ for ii, tile in enumerate(utiles):
   row    = np.array(row).astype(np.int).T
 
   ##                                                                                                                                                                                                                                   
-  np.savetxt('bitgrid/txt/sky_tile_{:06d}.txt'.format(tile), skyrow, fmt='%d\t', header='\t'.join(ds_dtypes))
-  np.savetxt('bitgrid/txt/tile_{:06d}.txt'.format(tile), row, fmt='%d\t', header='\t'.join(names))
+  np.savetxt('bitgrid/{}/txt/sky_tile_{:06d}.txt'.format(applyto, tile), skyrow, fmt='%d\t', header='\t'.join(ds_dtypes))
+  np.savetxt('bitgrid/{}/txt/tile_{:06d}.txt'.format(applyto, tile), row, fmt='%d\t', header='\t'.join(names))
   '''
   ##
   batch = 25
@@ -273,7 +303,7 @@ for ii, tile in enumerate(utiles):
     table   = df.to_latex(column_format=column_format, bold_rows=False, multirow=True)
     lines   = table.split('\n')
     
-    with open('bitgrid/tex/tile_{:06d}_{}.tex'.format(tile, i * batch), 'w') as tf:
+    with open('bitgrid/{}/tex/tile_{:06d}_{}.tex'.format(applyto, tile, i * batch), 'w') as tf:
       tf.write(lines[0])
       tf.write(lines[1])
       tf.write(lines[2])
