@@ -16,7 +16,6 @@ from   collections                   import  OrderedDict
 
 BGS_MASKBITS = OrderedDict()
 
-
 BGS_MASKBITS['BMB_NOBS']        =   0x1,    # (gnobs >= 1) & (rnobs >= 1) & (znobs >= 1)
 BGS_MASKBITS['BMB_FRACMASK']    =   0x2,    # (gfracmasked < 0.4) & (rfracmasked < 0.4) & (zfracmasked < 0.4)
 BGS_MASKBITS['BMB_FRACFLUX']    =   0x4,    # (gfracflux < 5.0) & (rfracflux < 5.0) & (zfracflux < 5.0)
@@ -154,21 +153,29 @@ ds_dtypes = ['SKY', 'BAD_SKY', 'SUPP_SKY']
 sv_dtypes = ['STD_WD', 'STD_FAINT', 'STD_BRIGHT', 'MWS_ANY', 'BGS_ANY', 'LRG', 'LRG_INIT_4PASS', 'LRG_SUPER_4PASS', 'LOWZ_FILLER', 'ELG', 'QSO', 'SCND_ANY']
 sv_btypes = ['BGS_BRIGHT', 'BGS_FAINT', 'BGS_FAINT_EXT', 'BGS_FIBMAG', 'BGS_LOWQ']
 
-names     = ['SKY', 'BAD', 'SUP'] + ['WD', 'STD FNT', 'STD BRT', 'MWS', 'BGS', 'LRG', 'LRG INIT', 'LRG SUPER', 'LRG LOZ', 'ELG', 'QSO', 'SCD'] + ['BRT', 'FNT', 'FEXT', 'FMAG', 'LOQ']
+names     = []
+##  names    += ['SKY', 'BAD', 'SUP']
+names    += ['WD', 'STD FNT', 'STD BRT', 'MWS', 'BGS', 'LRG', 'LRG INIT', 'LRG SUPER', 'LRG LOZ', 'ELG', 'QSO', 'SCD']
+names    += ['BRT', 'FNT', 'FEXT', 'FMAG', 'LOQ']
+names    += ['MEDIUM', 'LSLGA', 'SCLUSTER']
 names    += ['NOBS', 'FMASK', 'FFLUX', 'FIN', 'IVAR', 'BMASK', 'RMGLO', 'RMGHI', 'ZMRLO', 'ZMRHI', 'GRR', 'GG', 'PSF']
+names    += ['BPIX', 'STR', 'BLEED', 'EDGE', 'OLIER']
 
 print('\n\nWelcome.\n\n')
 
-for tile in utiles:  
+for ii, tile in enumerate(utiles):  
+  skyrow  = []
   row     = []
-
+  
   try:
-    print('Solving for Tile {}.'.format(tile))
+    print('Solving for Tile {} ({} of {}).'.format(tile, ii, len(utiles)))
 
     fname = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/tile-{:06}.fits'.format(tile)
     _fits = fits.open(fname)  
     dat   = Table(_fits[1].data)  ##  ['FIBER', 'DESI_TARGET', 'BGS_TARGET', 'SV1_DESI_TARGET', 'SV1_BGS_TARGET']
 
+    sweep = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/sweeps/tile-{:06}.fits'.format(tile)
+    
     ##
     dat.sort('FIBER')
     
@@ -227,7 +234,7 @@ for tile in utiles:
             print(x, (dat['SV1_DESI_TARGET'][i]     &   svdesi_mask.mask(x)) != 0)
 
   for x in ds_dtypes:
-    row.append((dat['DESI_TARGET']     & desi_mask.mask(x))   != 0)
+    skyrow.append((dat['DESI_TARGET']  & desi_mask.mask(x))   != 0)
 
   for x	in sv_dtypes:
     row.append((dat['SV1_DESI_TARGET'] & svdesi_mask.mask(x)) != 0)
@@ -235,13 +242,22 @@ for tile in utiles:
   for x in sv_btypes:
     row.append((dat['SV1_BGS_TARGET']  & svbgs_mask.mask(x))  != 0)
 
+  for bit, x in zip([11, 12, 13], ['MEDIUM', 'LSLGA', 'SC-NGC']):
+    row.append((dat['MASKBITS']        & 2 ** bit)            != 0)
+    
   for x in BGS_MASKBITS.keys():
-    row.append((dat['BGS_MASKBITS']    & BGS_MASKBITS[x])      != 0)
-      
-  ##  
-  row   = np.array(row).astype(np.int).T
+    row.append((dat['BGS_MASKBITS']    & BGS_MASKBITS[x])     != 0)
+
+  for bit, _type in zip([0, 1, 6, 8, 11], ['BPIX', 'STR', 'BLEED', 'EDGE', 'OUTLIER']):
+    is_set = ((dat['ALLMASK_G'] & 2 ** bit) != 0) | ((dat['ALLMASK_R'] & 2 ** bit) != 0) | ((dat['ALLMASK_Z'] & 2 ** bit) != 0)
+    row.append(is_set)
+    
+  ##
+  skyrow = np.array(skyrow).astype(np.int).T
+  row    = np.array(row).astype(np.int).T
 
   ##                                                                                                                                                                                                                                   
+  np.savetxt('bitgrid/txt/sky_tile_{:06d}.txt'.format(tile), skyrow, fmt='%d\t', header='\t'.join(ds_dtypes))
   np.savetxt('bitgrid/txt/tile_{:06d}.txt'.format(tile), row, fmt='%d\t', header='\t'.join(names))
   '''
   ##

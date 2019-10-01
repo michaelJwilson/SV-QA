@@ -29,7 +29,7 @@ tiles      = Table(_file[1].data)['AIRMASS', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMA
 ##
 scratch    = os.environ['CSCRATCH']
 _sv_mtl    = fits.open(scratch + '/BGS/SV-ASSIGN/mtls/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits')
-##sv_mtl     = Table(_sv_mtl[1].data)
+sv_mtl     = Table(_sv_mtl[1].data)
 
 print(_sv_mtl[1].header)
 
