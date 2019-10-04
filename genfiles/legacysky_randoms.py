@@ -23,8 +23,10 @@ rc('text', usetex=True)
 
 
 nside       = 2096
-camera      = b'90prime'   ##  ['90prime', 'mosaic', 'decam']
-band        = b'r'         ##  [b'g', b'r', b'z']
+camera      = b'decam'   ##  ['90prime', 'mosaic', 'decam']
+band        = b'r'       ##  [b'g', b'r', b'z']
+
+plot_elgs   = True
 
 if camera  == b'mosaic':
   band      = b'z'
@@ -98,10 +100,25 @@ _file       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/skies/skies_{}_{}.txt
 nfail       = 0
 
 if not os.path.exists(_file):
-  exps       = ccd[ccd['filter'] == band]
+  ccd          = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/ccds/ccds-annotated-{}-dr8.fits'.format(camera.decode('UTF-8')))
+  dtype        = ccd[1].get_rec_dtype()[0]
 
-  result     = np.zeros(len(randoms) * len(skies)).reshape(len(randoms), len(skies))
-  count      = np.zeros(len(randoms), dtype=np.int32)
+  ccd          = ccd[1].read(vstorage='object')
+  ccd          = np.array(ccd, dtype=dtype)[cols + skies]
+
+  plverf        = remap(ccd['plver']) ##  np.array(remap(ccd['plver']), dtype=[('plverf', np.float32)])                                                                                                                                   
+  ##                                                                                                                                                                                                                                  
+  ccd           = rfn.merge_arrays([ccd, plverf], flatten = True, usemask = False)
+
+  skies.remove('plver')
+
+  skies         = skies + ['plverf']
+  ccd           = ccd[cols + skies]
+  
+  exps          = ccd[ccd['filter'] == band]
+ 
+  result        = np.zeros(len(randoms) * len(skies)).reshape(len(randoms), len(skies))
+  count         = np.zeros(len(randoms), dtype=np.int32)
 
   for i, x in enumerate(exps):
     try:
@@ -159,10 +176,10 @@ randoms['RA'] += 60.
 result      =  result[(-30. < randoms['DEC'])]
 randoms     = randoms[(-30. < randoms['DEC'])] 
 
-if camera   == 'decam':
+if camera   == b'decam':
   result, randoms = [result[(randoms['DEC'] < 30.)], randoms[(randoms['DEC'] < 30.)]]
 
-elif camera == '90prime':
+elif camera == b'90prime':
   result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
 
 else:
@@ -208,21 +225,23 @@ for i, _ in enumerate(skies):
   axarr[row][col].set_xlim(360., 0.)
 
 ##  
-hpind, hpra, hpdec, tdensity = np.loadtxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), unpack=True)                                                                   
-sc           = axarr[-1][-1].scatter(hpra, hpdec, c=tdensity, s=1)
+if plot_elgs:
+  hpind, hpra, hpdec, tdensity = np.loadtxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), unpack=True)                                                                
+  sc = axarr[-1][-1].scatter(hpra, hpdec, c=tdensity, s=1)
 
-plt.colorbar(sc, ax=axarr[-1][-1])
+  plt.colorbar(sc, ax=axarr[-1][-1])
+  
+  axarr[-1][-1].set_title('ELG DENSITY')
 
-axarr[-1][-1].set_title('ELG DENSITY')
+  axarr[-1][-1].set_xlim(360., 0.)
+  axarr[-1][-1].set_ylim(ylims)
 
-axarr[-1][-1].set_xlim(360., 0.)
-axarr[-1][-1].set_ylim(ylims)
-
+##
 fig.suptitle(r'{}      ${}$-band'.format(camera.decode('UTF-8').upper(), band.decode('UTF-8')), fontsize=14)
   
 print('Number of failures: {}'.format(nfail))
   
 plt.subplots_adjust(left = 0.05, right = 0.95, hspace=0.6, wspace=0.4, top = 0.925, bottom = 0.05)
-pl.savefig('skydepth.pdf')
+pl.savefig('skydepth_{}_{}.pdf'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
 
 print('\n\nDone.\n\n')
