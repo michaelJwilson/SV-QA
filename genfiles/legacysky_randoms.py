@@ -26,6 +26,7 @@ nside       = 2096
 camera      = b'decam'   ##  ['90prime', 'mosaic', 'decam']
 band        = b'r'       ##  [b'g', b'r', b'z']
 
+recompute   = False
 plot_elgs   = True
 
 if camera  == b'mosaic':
@@ -53,12 +54,6 @@ skies       = ['exptime',\
                'fwhm',\
                'plver']
 
-ccd          = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/ccds/ccds-annotated-{}-dr8.fits'.format(camera.decode('UTF-8')))
-dtype        = ccd[1].get_rec_dtype()[0]
-  
-ccd          = ccd[1].read(vstorage='object')
-ccd          = np.array(ccd, dtype=dtype)[cols + skies]
-
 def remap(x, printit=False):  
   uentries, cnts = np.unique(x, return_counts = True)
 
@@ -79,18 +74,6 @@ def remap(x, printit=False):
     
   return  result
 
-plverf        = remap(ccd['plver']) ##  np.array(remap(ccd['plver']), dtype=[('plverf', np.float32)])
-
-## 
-ccd           = rfn.merge_arrays([ccd, plverf], flatten = True, usemask = False)
-
-skies.remove('plver')
-
-skies         = skies + ['plverf']
-ccd           = ccd[cols + skies]
-
-##  assert  np.all(ccd['camera'] == camera)
-
 ##
 randoms     = fitsio.FITS('/project/projectdirs/desi/target/catalogs/dr8/0.31.0/randoms/randoms-inside-dr8-0.31.0-2.fits')
 randoms     = randoms[1]['RA', 'DEC'][:nrandom]
@@ -99,7 +82,9 @@ _file       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/skies/skies_{}_{}.txt
 
 nfail       = 0
 
-if not os.path.exists(_file):
+if (not os.path.exists(_file)) | overwrite:
+  print('{} not found, recalculating.'.format(_file))
+
   ccd          = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/ccds/ccds-annotated-{}-dr8.fits'.format(camera.decode('UTF-8')))
   dtype        = ccd[1].get_rec_dtype()[0]
 
@@ -161,6 +146,10 @@ if not os.path.exists(_file):
 else:
   result    = np.loadtxt(_file)
 
+  skies.remove('plver')
+
+  skies     = skies + ['plverf']
+  
 ##
 ncol        = 2
 nrow        = np.int(np.ceil(len(skies) / 2))
