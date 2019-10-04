@@ -69,9 +69,11 @@ def remap(x, printit=False):
     
     result[x == u] = rentry
 
-  ##
-  print(np.unique(result, return_counts=True))
+  ##  print(result['plverf'])
     
+  ##
+  print(np.unique(result['plverf'], return_counts=True))
+  
   return  result
 
 ##
@@ -82,7 +84,7 @@ _file       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/skies/skies_{}_{}.txt
 
 nfail       = 0
 
-if (not os.path.exists(_file)) | overwrite:
+if (not os.path.exists(_file)) | recompute:
   print('{} not found, recalculating.'.format(_file))
 
   ccd          = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/ccds/ccds-annotated-{}-dr8.fits'.format(camera.decode('UTF-8')))
@@ -215,8 +217,15 @@ for i, _ in enumerate(skies):
 
 ##  
 if plot_elgs:
-  hpind, hpra, hpdec, tdensity = np.loadtxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), unpack=True)                                                                
-  sc = axarr[-1][-1].scatter(hpra, hpdec, c=tdensity, s=1)
+  ##  hpind, hpra, hpdec, tdensity = np.loadtxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), unpack=True)  
+
+  binary       = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside))
+  hpind        = binary[:,0]
+  hpra         = binary[:,1]
+  hpdec        = binary[:,2]
+  tdensity     = binary[:,3]
+  
+  sc           = axarr[-1][-1].plot(hpra, hpdec, s=1, c=tdensity, )
 
   plt.colorbar(sc, ax=axarr[-1][-1])
   

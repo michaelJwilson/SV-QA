@@ -31,8 +31,8 @@ def write_elgs(elgs, write_elgs=False):
 
   tdensity     = cnts / parea  ##  per sq. deg.                                                                                                                                                                   
 
-  np.savetxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), np.c_[hpind, hpra, hpdec, tdensity], fmt='%.6lf')
-
+  np.save('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside), np.c_[hpind, hpra, hpdec, tdensity])
+  
   if write_elgs:
     elgs.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/elgs/elgs.fits', format='fits', overwrite=True)
   
@@ -58,11 +58,3 @@ for i, _targets in enumerate(targets[1:]):
     
 ##
 write_elgs(elgs, write_elgs=True)
-    
-##
-fig          = pl.gcf()
-ax           = pl.gca()
-
-sc           = plt.scatter(hpra, hpdec, c=tdensity)
-pl.colorbar(sc, ax=ax)
-pl.show()
