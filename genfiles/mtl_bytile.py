@@ -16,6 +16,7 @@ from    desitarget.targetmask  import  load_mask_bits
 from    astropy.coordinates    import  SkyCoord
 from    astropy                import  units     as u
 from    desimodel.footprint    import  pix2tiles, find_tiles_over_point, is_point_in_desi
+from    desitarget.targets     import  encode_targetid
 
 
 ##  https://faun.rc.fas.harvard.edu/eschlafly/desi/tiling/dr8/note.pdf
@@ -31,9 +32,11 @@ scratch    = os.environ['CSCRATCH']
 _sv_mtl    = fits.open(scratch + '/BGS/SV-ASSIGN/mtls/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits')
 sv_mtl     = Table(_sv_mtl[1].data)
 
-print(_sv_mtl[1].header)
+##
+sv_mtl['TARGETID'] = encode_targetid(objid=sv_mtl['BRICK_OBJID'], brickid=sv_mtl['BRICKID'], release=sv_mtl['RELEASE'], sky=0, mock=0)
+sv_mtl.pprint()
 
-exit(1)
+sv_mtl.write(scratch + '/BGS/SV-ASSIGN/mtls/MTL_ALLBGS_STDFAINT_STDBRIGHT_svresolve.0.31.0_49677629_samePRIORITY.fits', format='fits', overwrite=True)
 
 ##
 nside      = 64
@@ -64,7 +67,9 @@ sv_mtl     = join(sv_mtl, tiles, keys=['TILEID'], join_type='left')
 ##  Unique TILEIDS.
 utiles     = np.unique(sv_mtl['TILEID'].quantity)
 
-for _tile in utiles:
+for ii, _tile in enumerate(utiles):
+  print('Solving for {} of {}.'.format(ii, len(utiles)))
+
   fname    = scratch + '/BGS/SV-ASSIGN/svmtl_{:06d}.fits'.format(_tile)
   tile_cut = sv_mtl[sv_mtl['TILEID'] == _tile]
 

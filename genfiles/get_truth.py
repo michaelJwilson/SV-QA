@@ -19,11 +19,13 @@ _all      = ['2dFGRS-match.fits', '6dFGS-match.fits', '2dflens-match.fits', 'GAM
 
 _all     += ['hsc_pdr1_deep.forced.reduced-match.fits', 'hsc_pdr1_wide.forced.reduced-match.fits', 'hsc_pdr1_udeep.forced.reduced-match.fits']
 
+_all      = ['primus-zcat-moustakas-match.fits']
+
 ##  Writes desired truth catalogues to scratch.
 for i, survey in enumerate(_all):
   for gcap in ['north', 'south']:
     infile     = truthdir + '/{}/matched/'.format(gcap) + survey
-
+    
     if not os.path.exists(infile):
       ##  print('Cannot find: {}'.format(infile))
       continue

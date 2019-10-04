@@ -167,7 +167,7 @@ sv_btypes = ['BGS_BRIGHT', 'BGS_FAINT', 'BGS_FAINT_EXT', 'BGS_FIBMAG', 'BGS_LOWQ
 
 names     = []
 ##  names    += ['SKY', 'BAD', 'SUP']
-names    += ['WD', 'STD FNT', 'STD BRT', 'MWS', 'BGS', 'LRG', 'LRG INIT', 'LRG SUPER', 'LRG LOZ', 'ELG', 'QSO', 'SCD']
+names    += ['WD', 'STD DRK', 'STD BRT', 'MWS', 'BGS', 'LRG', 'LRG INIT', 'LRG SUPER', 'LRG LOZ', 'ELG', 'QSO', 'SCD']
 names    += ['BRT', 'FNT', 'FEXT', 'FMAG', 'LOQ']
 names    += ['MEDIUM', 'LSLGA', 'SCLUSTER']
 names    += ['NOBS', 'FMASK', 'FFLUX', 'FIN', 'IVAR', 'BMASK', 'RMGLO', 'RMGHI', 'ZMRLO', 'ZMRHI', 'GRR', 'GG', 'PSF', 'AEN PSF']
@@ -202,17 +202,18 @@ for ii, tile in enumerate(utiles):
 
   ##  print(dat.columns)                                                                                                                                                                                                          
 
-  ##  Remove skies.                                                                                                                                                                                                               
-  isin  = np.ones(len(dat), dtype=bool)
+  if applyto == 'assign':
+    ##  Remove skies.                                                                                                                                                                                                               
+    isin  = np.ones(len(dat), dtype=bool)
 
-  for x in ds_dtypes:
-    isin = isin & ((dat['DESI_TARGET'] & desi_mask.mask(x)) == 0)
+    for x in ds_dtypes:
+      isin = isin & ((dat['DESI_TARGET'] & desi_mask.mask(x)) == 0)
 
-  skies = dat[~isin]
-  dat   = dat[ isin]
+    skies = dat[~isin]
+    dat   = dat[ isin]
 
-  ##                                                                                                                                                                                                                              
-  dat.sort('FIBER')
+    ##                                                                                                                                                                                                                              
+    dat.sort('FIBER')
 
   ##
   ttypes        = ['faint', 'bright', 'faint_ext', 'lowq', 'fibmag']
@@ -256,15 +257,17 @@ for ii, tile in enumerate(utiles):
     else:
         ##  Low-quality overlap with STD. BRIGHT, STD. FAINT and MWS.
         print('\n\nMismatches between LOWQ def. and that in catalogue:  {} {}'.format(lowq, x & in_mask[i]))
-        
-        for x in ds_dtypes:
+
+        if applyto == 'assign':        
+          for x in ds_dtypes:
             print(x, (dat['DESI_TARGET'][i]     &   desi_mask.mask(x)) != 0)
 
         for x in sv_dtypes:
             print(x, (dat['SV1_DESI_TARGET'][i]     &   svdesi_mask.mask(x)) != 0)
 
-  for x in ds_dtypes:
-    skyrow.append((skies['DESI_TARGET']  & desi_mask.mask(x))   != 0)
+  if applyto == 'assign':            
+    for x in ds_dtypes:
+      skyrow.append((skies['DESI_TARGET']  & desi_mask.mask(x))   != 0)
 
   for x	in sv_dtypes:
     row.append((dat['SV1_DESI_TARGET'] & svdesi_mask.mask(x)) != 0)

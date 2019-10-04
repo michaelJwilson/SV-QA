@@ -9,7 +9,7 @@ from   astropy          import  constants as const
 
 
 ##  Only standardise the spectroscopic aspect, LS half is fine.  
-files = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/*.fits')
+files = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/primus*.fits')
 
 for _file in files:
   dat          = Table(fits.open(_file)[1].data)
@@ -127,6 +127,13 @@ for _file in files:
 
     del  dat['ra']
     del  dat['dec']
+
+  elif survey in ['primus-north', 'primus-south']:
+    ##  print(survey)                                                                                                                                                                                                                  
+    ##  print(dat)
+    dat['Z']     = dat['ZPRIMUS']
+    dat['ZERR']  = dat['ZPRIMUS_ERR']
+    dat['ZWARN'] = dat['ZPRIMUS_ZWARNING']
     
   else:
     print('Error.')

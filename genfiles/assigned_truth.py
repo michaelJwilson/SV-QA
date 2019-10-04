@@ -13,7 +13,7 @@ from   desitarget.geomask import circles
 
 plt.figure(figsize=(7, 10))
 
-compute    = True
+compute    = False
 
 ax1        = plt.subplot(4, 1, 1)
 ax2        = plt.subplot(4, 1, 2)
@@ -25,12 +25,14 @@ tiles      = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tiles/
 _assigned  = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/fiberassign/assigned_targets.fits')[1].data)
 _assigned.sort('BRICK_OBJID')
 
+ax4.plot(_assigned['TARGET_RA'][::10], _assigned['TARGET_DEC'][::10], c='gold', marker='.', lw=0, markersize=1, label='DESI', alpha=0.1, rasterized=False, zorder=2)
+
 if compute:
   files    = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/standard/*.fits')
 
 else:
   files    = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/*.fits')
-    
+  
 for _file in files:
   survey   = _file.split('/')[-1].split('.')[0].split('-standard')[0]
 
@@ -71,6 +73,7 @@ for _file in files:
     matched    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/' + survey +'.fits')[1].data)
     
   label        = survey + '-{:d}'.format(len(matched))
+  label        = label.replace('north', 'N').replace('south', 'S')
   
   ##  Randomise the order (to prevent correlation with e.g. ra).                                                                                                                                                                     
   sample       = random.sample(range(0, len(matched)), len(matched))
@@ -80,31 +83,33 @@ for _file in files:
   matched      = matched[::2]
   
   if survey in ['sdss-north', 'sdss-south']:
-    ax1.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label, alpha=0.5)
+    ax1.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label.upper(), alpha=0.5)
 
   elif survey in ['2dFGRS-north', '2dFGRS-south', '6dFGS-north', '6dFGS-south', 'ages_reduced-north', 'ages_reduced-south']:
-    ax2.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label, alpha=0.5)
+    ax2.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label.upper(), alpha=0.5)
 
-  elif survey in ['GAMA-north', 'GAMA-south']:
-    ax3.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label, alpha=0.5)
+  elif survey in ['GAMA-north', 'GAMA-south', 'primus-north', 'primus-south']:
+    ax1.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label.upper(), alpha=0.5)
+
+  elif survey in ['hsc_pdr1_udeep.forced.reduced-north', 'hsc_pdr1_udeep.forced.reduced-south', 'hsc_pdr1_deep.forced.reduced-north', 'hsc_pdr1_deep.forced.reduced-south',\
+                  'hsc_pdr1_wide.forced.reduced-north',  'hsc_pdr1_wide.forced.reduced-south']:
+
+    label = label.replace('hsc_pdr1', 'HSC1').replace('.forced', '').replace('.reduced', '').replace('_', '-').replace('udeep', 'UD').replace('deep', 'D').replace('wide', 'W')
     
-  else:
-    ax3.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label, alpha=0.5)
-
-##  Last plot show SV tiles.                                                                                                                                                                                                         
-##  kwargs = {'ec': 'k', 'lw': 5, 'alpha': 0.5}
-##  circles(tiles['RA'].quantity, tiles['DEC'].quantity, s=1.6, c='k', **kwargs)
-ax4.plot(_assigned['TARGET_RA'], _assigned['TARGET_DEC'], c='gold', marker='x', lw=0, markersize=1, label='DESI', alpha=0.3)
+    ax4.scatter(matched['RA'], matched['DEC'], s=10, label=label.upper(), alpha=1., zorder=1)
+    
+  else:    
+    ax3.scatter(matched['RA'], matched['DEC'], s=5, rasterized=True, label=label.upper(), alpha=0.5)
     
 ##
-for ax in [ax1, ax2, ax3, ax4]:  
+for ax, ncol in zip([ax1, ax2, ax3, ax4], [3, 2, 2, 3]):  
   ax.axhline(y=0.,     c='k', alpha=0.5)
   ax.axhline(y=32.375, c='k', alpha=0.5)
   
   ax.set_xlim(360.,   0.)
   ax.set_ylim(-40.,  80.)
 
-  ax.legend(frameon=False, fontsize=10, ncol=2, loc=1)
+  ax.legend(frameon=False, fontsize=9, ncol=ncol, loc=3, columnspacing=0, labelspacing=0, handletextpad=0)
   
 plt.tight_layout()
   

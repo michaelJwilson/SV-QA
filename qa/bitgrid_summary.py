@@ -39,8 +39,8 @@ df.index.name    = 'FIBER'
 
 sky.columns      = [x.replace('_', ' ') for x in sky.columns]
 
-skies            = pd.DataFrame(sky.sum(axis = 0, skipna = True))
-skies.columns    = ['NASSIGN']
+skies            = pd.DataFrame(sky.sum(axis = 0, skipna = True), dtype=np.int32)
+skies.columns    = ['N' + applyto.upper()]
 
 skies['Comment'] = [''] * len(skies)
 skies['Comment'] = skies['Comment'].astype('object')
@@ -48,6 +48,8 @@ skies['Comment'] = skies['Comment'].astype('object')
 skies['Comment'][0] = 'Sky.'
 skies['Comment'][1] = 'Bad sky.'
 skies['Comment'][2] = 'Supplementary sky.'
+
+##  print(skies)
 
 ##  print(skies)
 
@@ -68,9 +70,11 @@ for x in cols:
 
 ##
 legend          = summary.copy()[['WD']]
-legend.columns  = ['NASSIGN']
+legend.columns  = ['N' + applyto.upper()]
 
-legend['NASSIGN']     = np.diag(summary)
+legend['N' + applyto.upper()] = np.diag(summary)
+
+##
 legend['Comment']     =  ''
 legend['Comment'][0]  =  'Standard - White Dwarf.'
 legend['Comment'][1]  =  'Standard - Dark.'
@@ -92,7 +96,7 @@ legend['Comment'][16] =  'Low quality.'
 legend['Comment'][17] =  'Medium star mask.'
 legend['Comment'][18] =  'Large galaxy mask.'
 legend['Comment'][19] =  'Globular cluster mask.'
-legend['Comment'][20] =  'NOBS $<$ 1 in all bands.'
+legend['Comment'][20] =  'NOBS $<$ 1 in any of grz.'
 legend['Comment'][21] =  'Profile-weighted fraction of pixels masked.'
 legend['Comment'][22] =  'Profile-weighted fraction of flux from others.'
 legend['Comment'][23] =  'Fraction of a sources flux within the blob.'
@@ -104,13 +108,13 @@ legend['Comment'][28] = r'$(z-r) < -1$.'
 legend['Comment'][29] =	r'$(z-r) >  4$.'
 legend['Comment'][30] = r'Stellar by GAIA color.'
 legend['Comment'][31] = r'GAIA detection in G.'
-legend['Comment'][32] = r'PSF morphology'
+legend['Comment'][32] = r'PSF Tractor morphology.'
 legend['Comment'][33] = r'PSF by GAIA AEN.'
-legend['Comment'][34] = r'Bad column, bright pixel etc.'
-legend['Comment'][35] = r'Saturated'
-legend['Comment'][36] = r'Bleed trail.'
-legend['Comment'][37] = r'Edge pixel.'
-legend['Comment'][38] = r'{\tt legacypipe} outlier pixel.'
+legend['Comment'][34] = r'Bad column, bright pixel etc (ALL).'
+legend['Comment'][35] = r'Saturated (ALL).'
+legend['Comment'][36] = r'Bleed trail (ALL).'
+legend['Comment'][37] = r'Edge pixel (ALL).'
+legend['Comment'][38] = r'{\tt legacypipe} outlier pixel (ALL).'
 
 legend                = skies.append(legend, ignore_index=True)
 
@@ -128,7 +132,7 @@ column_format         = '|c|c|c|'
 legend                = legend.to_latex(column_format=column_format, bold_rows=False, multirow=True, escape=False)  
 lines                 = legend.split('\n')
 
-with open('bitgrid/{}/tex/legend.tex'.format(applyto), 'w') as tt:
+with open('bitgrid/{}/tex/{}_legend.tex'.format(applyto, applyto), 'w') as tt:
   tt.write(lines[0])
   tt.write('\n')
   tt.write(lines[1])
@@ -162,7 +166,7 @@ summary       = summary.to_latex(column_format=column_format, bold_rows=False, m
 summary       = summary.replace('-99', '--')
 lines         = summary.split('\n')  
 
-with open('bitgrid/{}/tex/summary.tex'.format(applyto), 'w') as tf:
+with open('bitgrid/{}/tex/{}_summary.tex'.format(applyto, applyto), 'w') as tf:
   tf.write(lines[0])
   tf.write('\n')
   tf.write(lines[1])
