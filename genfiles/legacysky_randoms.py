@@ -27,9 +27,9 @@ rc('font', **{'family':'serif', 'serif':['Times']})
 rc('text', usetex=True)
 
 
-nside       = 256
+nside       = 128
 camera      = b'decam' ##  ['90prime', 'mosaic', 'decam']
-band        = b'r'     ##  [b'g', b'r', b'z']
+band        = b'g'     ##  [b'g', b'r', b'z']
 
 recompute   = False
 plot_elgs   = True
@@ -235,6 +235,8 @@ for i, _ in enumerate(skies):
 
 ##  
 if plot_elgs:
+  nside        = 512
+
   binary       = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside))
   hpind        = binary[:,0]
   hpra         = binary[:,1]
