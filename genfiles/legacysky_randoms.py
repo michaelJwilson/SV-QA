@@ -1,4 +1,5 @@
 import  os
+import  sys
 import  glob
 import  fitsio
 import  matplotlib
@@ -21,23 +22,24 @@ from    mpl_toolkits.axes_grid1 import   make_axes_locatable
 from    mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-##  plt.style.use(['dark_background'])
+plt.style.use(['dark_background'])
 
 rc('font', **{'family':'serif', 'serif':['Times']})
 rc('text', usetex=True)
 
+nside       = np.int(sys.argv[1])
 
-nside       = 128
-camera      = b'decam' ##  ['90prime', 'mosaic', 'decam']
-band        = b'g'     ##  [b'g', b'r', b'z']
+camera      = str.encode(sys.argv[2])  ##  [b'90prime', b'mosaic', b'decam']
+band        = str.encode(sys.argv[3])  ##  [b'g', b'r', b'z']
 
 recompute   = False
+noplot      = False
 plot_elgs   = True
 
 if camera  == b'mosaic':
   band      = b'z'
 
-nrandom     = np.int(10000)
+nrandom     = np.int(20000)
 
 ##  Sky rms for the entire image (in counts).
 ##  Our pipeline (not the CP) estimate of the sky level, average over the image, in ADU.
@@ -156,6 +158,9 @@ else:
   skies.remove('plver')
 
   skies     = skies + ['plverf']
+
+if noplot:
+  exit(0)
   
 ##
 ncol        = 2
@@ -215,17 +220,6 @@ for i, _ in enumerate(skies):
   step         = (vmax - vmin) / 50.
 
   fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, step, markersize=0.7)
-  
-  ##  sc       = axarr[row][col].scatter(hpra, hpdec, c=colors, s=.1, vmin=vmin, vmax=vmax, rasterized=True)
-  ##  cb       = plt.colorbar(sc, ax=axarr[row][col])
-
-  ##  divider      = make_axes_locatable(axarr[row][col])
-  ##  cax          = divider.append_axes('right', size='2%', pad=0.2)                                                                                                                                                 
-
-  ##  cmap         = plt.get_cmap("viridis")
-  ##  norm         = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)  
-
-  ##  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
   
   if i == 0:
     ylims      = axarr[row][col].get_ylim()

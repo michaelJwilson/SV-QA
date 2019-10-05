@@ -4,13 +4,18 @@ import matplotlib.pyplot as plt
 
 from   mpl_toolkits.axes_grid1 import   make_axes_locatable
 
+
 def fast_scatter(ax, xs, ys, values, mmin, mmax, step, markersize=0.1):
   ##  Digitzie.                                                                                                                                                                                                                        
   points       = step * np.floor(np.clip(values, a_min=mmin, a_max=mmax) / step)
   levels       = np.unique(points)
 
-  cmap         = plt.get_cmap("viridis", len(levels))
-  norm         = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
+  if len(levels) > 500:
+    return  0
+
+  ##  ['Summer', 'Wistia', 'autumn_r']
+  cmap         = plt.get_cmap('autumn_r', len(levels))
+  norm         = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[1])
 
   colors       = cmap([1. * x / len(levels) for x in range(len(levels))])
 
