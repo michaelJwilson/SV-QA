@@ -1,30 +1,33 @@
 import  os
 import  glob
 import  fitsio
-import  pylab                  as      pl
-import  pandas                 as      pd
-import  numpy                  as      np
-import  astropy.io.fits        as      fits
-import  matplotlib.pyplot      as      plt 
-import  numpy.lib.recfunctions as      rfn
-import  healpy                 as      hp
+import  matplotlib
+import  pylab                   as       pl
+import  pandas                  as       pd
+import  numpy                   as       np
+import  astropy.io.fits         as       fits
+import  matplotlib.pyplot       as       plt 
+import  numpy.lib.recfunctions  as       rfn
+import  healpy                  as       hp
 
-from    matplotlib            import   rc
-from    astropy.table         import   Table, vstack
-from    desitarget.targets    import   encode_targetid
-from    desitarget.geomask    import   is_in_box
-from    desitarget.targetmask import   desi_mask
+from    matplotlib              import   rc
+from    astropy.table           import   Table, vstack
+from    desitarget.targets      import   encode_targetid
+from    desitarget.geomask      import   is_in_box
+from    desitarget.targetmask   import   desi_mask
+from    mpl_toolkits.axes_grid1 import   make_axes_locatable
+from    mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-plt.style.use(['dark_background'])
+##  plt.style.use(['dark_background'])
 
 rc('font', **{'family':'serif', 'serif':['Times']})
 rc('text', usetex=True)
 
 
-nside       = 2096
-camera      = b'decam'   ##  ['90prime', 'mosaic', 'decam']
-band        = b'r'       ##  [b'g', b'r', b'z']
+nside       = 256
+camera      = b'decam' ##  ['90prime', 'mosaic', 'decam']
+band        = b'r'     ##  [b'g', b'r', b'z']
 
 recompute   = False
 plot_elgs   = True
@@ -159,6 +162,9 @@ nrow        = np.int(np.ceil(len(skies) / 2))
 ##  
 fig, axarr  = plt.subplots(nrows=np.int(np.ceil(len(skies) / 2)), ncols=2, figsize=(10, 10))
 
+##
+plt.subplots_adjust(left = 0.05, right = 0.95, hspace=0.6, wspace=0.4, top = 0.925, bottom = 0.05)
+
 ##  Wrap randoms
 randoms['RA'][randoms['RA'] > 300.] -= 360.
 randoms['RA'] += 60.
@@ -205,10 +211,17 @@ for i, _ in enumerate(skies):
   vmin         = np.quantile(colors, 0.05)
   vmax         = np.quantile(colors, 0.95)
   
-  sc           = axarr[row][col].scatter(hpra, hpdec, c=colors, s=1, vmin=vmin, vmax=vmax)
+  sc           = axarr[row][col].scatter(hpra, hpdec, c=colors, s=.1, vmin=vmin, vmax=vmax, rasterized=True)
+  ##  cb       = plt.colorbar(sc, ax=axarr[row][col])
 
-  plt.colorbar(sc, ax=axarr[row][col])
+  divider      = make_axes_locatable(axarr[row][col])
+  cax          = divider.append_axes('right', size='2%', pad=0.2)                                                                                                                                                 
 
+  cmap         = plt.get_cmap("viridis")
+  norm         = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)  
+
+  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+  
   if i == 0:
     ylims      = axarr[row][col].get_ylim()
   
@@ -217,17 +230,59 @@ for i, _ in enumerate(skies):
 
 ##  
 if plot_elgs:
-  ##  hpind, hpra, hpdec, tdensity = np.loadtxt('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.txt'.format(nside), unpack=True)  
+  stride       = 1
 
   binary       = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside))
-  hpind        = binary[:,0]
-  hpra         = binary[:,1]
-  hpdec        = binary[:,2]
-  tdensity     = binary[:,3]
-  
-  sc           = axarr[-1][-1].plot(hpra, hpdec, s=1, c=tdensity, )
+  hpind        = binary[:,0][::stride]
+  hpra         = binary[:,1][::stride]
+  hpdec        = binary[:,2][::stride]
+  tdensity     = binary[:,3][::stride]
 
-  plt.colorbar(sc, ax=axarr[-1][-1])
+  ##  Cut to non-DES.                                                                                                                                                                                                                 
+  hpra         = hpra[hpdec > -30.]
+  tdensity     = tdensity[hpdec > -30.]
+  hpdec        = hpdec[hpdec > -30.]
+
+  if camera   == b'decam':
+    hpra       = hpra[hpdec < 30.]
+    tdensity   = tdensity[hpdec < 30.]
+    hpdec      = hpdec[hpdec < 30.]
+
+  else:
+    hpra       = hpra[hpdec > 35.]
+    tdensity   = tdensity[hpdec > 35.]
+    hpdec      = hpdec[hpdec > 35.]
+
+  ##  Digitzie. 
+  mmin         = np.quantile(tdensity, 0.01) 
+  mmax         = np.quantile(tdensity, 0.99)    
+  step         =   50.
+
+  dtdensity    = step * np.floor(np.clip(tdensity, a_min=mmin, a_max=mmax) / step)
+  levels       = np.unique(dtdensity)
+  
+  cmap         = plt.get_cmap("viridis", len(levels))
+  norm         = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
+
+  colors       = cmap([1. * x / len(levels) for x in range(len(levels))])
+  
+  ##  Wrap randoms.                                                                                                                                                                                                              
+  hpra[hpra > 300.] -= 360.
+  hpra        += 60.
+    
+  for i, level in enumerate(levels):
+    isin       = (dtdensity == level)
+
+    print('Plotting level {} of {} - {} targets at {}.'.format(i, len(levels), np.count_nonzero(isin), level))
+    
+    axarr[-1][-1].plot(hpra[isin], hpdec[isin], markersize=0.1, c=colors[i], lw=0, marker='.')  
+    
+  divider      = make_axes_locatable(axarr[-1][-1])
+  
+  cax          = divider.append_axes('right', size='2%', pad=0.2)  ##  loc='lower left'
+  ##  cax      = inset_axes(axarr[-1][-1], width="5%", height="100%", bbox_to_anchor=(1.05, 0., 1, 1), bbox_transform=axarr[-1][-1].transAxes, borderpad=0.0)
+  
+  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
   
   axarr[-1][-1].set_title('ELG DENSITY')
 
@@ -239,7 +294,6 @@ fig.suptitle(r'{}      ${}$-band'.format(camera.decode('UTF-8').upper(), band.de
   
 print('Number of failures: {}'.format(nfail))
   
-plt.subplots_adjust(left = 0.05, right = 0.95, hspace=0.6, wspace=0.4, top = 0.925, bottom = 0.05)
 pl.savefig('skydepth_{}_{}.pdf'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
 
 print('\n\nDone.\n\n')

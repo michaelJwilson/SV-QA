@@ -15,7 +15,7 @@ from    desitarget.geomask    import   is_in_box
 from    desitarget.targetmask import   desi_mask
 
 
-nside        = 2096
+nside        = 512
 parea        = hp.nside2pixarea(nside, degrees = True)
 
 cols         = ['RA', 'DEC', 'MORPHTYPE', 'DESI_TARGET']
