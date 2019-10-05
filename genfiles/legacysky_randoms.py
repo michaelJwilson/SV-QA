@@ -10,6 +10,8 @@ import  matplotlib.pyplot       as       plt
 import  numpy.lib.recfunctions  as       rfn
 import  healpy                  as       hp
 
+from    mpl_toolkits.axes_grid1 import   make_axes_locatable
+from    fast_scatter            import   fast_scatter
 from    matplotlib              import   rc
 from    astropy.table           import   Table, vstack
 from    desitarget.targets      import   encode_targetid
@@ -206,21 +208,24 @@ for i, _ in enumerate(skies):
   theta,phi    = hp.pix2ang(nside, hpind, nest=False)
   hpra, hpdec  = 180. / np.pi * phi, 90. -180. / np.pi * theta
 
-  colors       = np.array([np.mean(nresult[hppix == x]) for x in hpind])
+  values       = np.array([np.mean(nresult[hppix == x]) for x in hpind])
 
-  vmin         = np.quantile(colors, 0.05)
-  vmax         = np.quantile(colors, 0.95)
+  vmin         = np.quantile(values, 0.05)
+  vmax         = np.quantile(values, 0.95)
+  step         = (vmax - vmin) / 50.
+
+  fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, step, markersize=0.7)
   
-  sc           = axarr[row][col].scatter(hpra, hpdec, c=colors, s=.1, vmin=vmin, vmax=vmax, rasterized=True)
+  ##  sc       = axarr[row][col].scatter(hpra, hpdec, c=colors, s=.1, vmin=vmin, vmax=vmax, rasterized=True)
   ##  cb       = plt.colorbar(sc, ax=axarr[row][col])
 
-  divider      = make_axes_locatable(axarr[row][col])
-  cax          = divider.append_axes('right', size='2%', pad=0.2)                                                                                                                                                 
+  ##  divider      = make_axes_locatable(axarr[row][col])
+  ##  cax          = divider.append_axes('right', size='2%', pad=0.2)                                                                                                                                                 
 
-  cmap         = plt.get_cmap("viridis")
-  norm         = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)  
+  ##  cmap         = plt.get_cmap("viridis")
+  ##  norm         = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)  
 
-  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+  ##  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
   
   if i == 0:
     ylims      = axarr[row][col].get_ylim()
@@ -230,13 +235,11 @@ for i, _ in enumerate(skies):
 
 ##  
 if plot_elgs:
-  stride       = 1
-
   binary       = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside))
-  hpind        = binary[:,0][::stride]
-  hpra         = binary[:,1][::stride]
-  hpdec        = binary[:,2][::stride]
-  tdensity     = binary[:,3][::stride]
+  hpind        = binary[:,0]
+  hpra         = binary[:,1]
+  hpdec        = binary[:,2]
+  tdensity     = binary[:,3]
 
   ##  Cut to non-DES.                                                                                                                                                                                                                 
   hpra         = hpra[hpdec > -30.]
@@ -252,37 +255,17 @@ if plot_elgs:
     hpra       = hpra[hpdec > 35.]
     tdensity   = tdensity[hpdec > 35.]
     hpdec      = hpdec[hpdec > 35.]
-
-  ##  Digitzie. 
+    
+  ##  Wrap randoms.                                                                                                                                                                                                                  
+  hpra[hpra > 300.] -= 360.                                                                                                                                                                                                            
+  hpra        += 60.  
+    
+  ##  Digitize. 
   mmin         = np.quantile(tdensity, 0.01) 
   mmax         = np.quantile(tdensity, 0.99)    
-  step         =   50.
+  step         = (vmax - vmin) / 50.
 
-  dtdensity    = step * np.floor(np.clip(tdensity, a_min=mmin, a_max=mmax) / step)
-  levels       = np.unique(dtdensity)
-  
-  cmap         = plt.get_cmap("viridis", len(levels))
-  norm         = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[-1])
-
-  colors       = cmap([1. * x / len(levels) for x in range(len(levels))])
-  
-  ##  Wrap randoms.                                                                                                                                                                                                              
-  hpra[hpra > 300.] -= 360.
-  hpra        += 60.
-    
-  for i, level in enumerate(levels):
-    isin       = (dtdensity == level)
-
-    print('Plotting level {} of {} - {} targets at {}.'.format(i, len(levels), np.count_nonzero(isin), level))
-    
-    axarr[-1][-1].plot(hpra[isin], hpdec[isin], markersize=0.1, c=colors[i], lw=0, marker='.')  
-    
-  divider      = make_axes_locatable(axarr[-1][-1])
-  
-  cax          = divider.append_axes('right', size='2%', pad=0.2)  ##  loc='lower left'
-  ##  cax      = inset_axes(axarr[-1][-1], width="5%", height="100%", bbox_to_anchor=(1.05, 0., 1, 1), bbox_transform=axarr[-1][-1].transAxes, borderpad=0.0)
-  
-  cb           = matplotlib.colorbar.ColorbarBase(cax, cmap=cmap, norm=norm)
+  fast_scatter(axarr[-1][-1], hpra, hpdec, tdensity, mmin, mmax, step)
   
   axarr[-1][-1].set_title('ELG DENSITY')
 
@@ -294,6 +277,6 @@ fig.suptitle(r'{}      ${}$-band'.format(camera.decode('UTF-8').upper(), band.de
   
 print('Number of failures: {}'.format(nfail))
   
-pl.savefig('skydepth_{}_{}.pdf'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
+pl.savefig('skydepths/skydepth_{}_{}.pdf'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
 
 print('\n\nDone.\n\n')
