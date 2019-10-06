@@ -3,26 +3,26 @@ import  sys
 import  glob
 import  fitsio
 import  matplotlib
-import  pylab                   as       pl
-import  pandas                  as       pd
-import  numpy                   as       np
-import  astropy.io.fits         as       fits
-import  matplotlib.pyplot       as       plt 
-import  numpy.lib.recfunctions  as       rfn
-import  healpy                  as       hp
+import  pylab                                 as       pl
+import  pandas                                as       pd
+import  numpy                                 as       np
+import  astropy.io.fits                       as       fits
+import  matplotlib.pyplot                     as       plt 
+import  numpy.lib.recfunctions                as       rfn
+import  healpy                                as       hp
 
-from    mpl_toolkits.axes_grid1 import   make_axes_locatable
-from    fast_scatter            import   fast_scatter
-from    matplotlib              import   rc
-from    astropy.table           import   Table, vstack
-from    desitarget.targets      import   encode_targetid
-from    desitarget.geomask      import   is_in_box
-from    desitarget.targetmask   import   desi_mask
-from    mpl_toolkits.axes_grid1 import   make_axes_locatable
-from    mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from    mpl_toolkits.axes_grid1               import   make_axes_locatable
+from    fast_scatter                          import   fast_scatter
+from    matplotlib                            import   rc
+from    astropy.table                         import   Table, vstack
+from    desitarget.targets                    import   encode_targetid
+from    desitarget.geomask                    import   is_in_box
+from    desitarget.targetmask                 import   desi_mask
+from    mpl_toolkits.axes_grid1               import   make_axes_locatable
+from    mpl_toolkits.axes_grid1.inset_locator import   inset_axes
 
 
-plt.style.use(['dark_background'])
+##  plt.style.use(['dark_background'])
 
 rc('font', **{'family':'serif', 'serif':['Times']})
 rc('text', usetex=True)
@@ -151,6 +151,9 @@ if (not os.path.exists(_file)) | recompute:
   result[count > 0] /= count[count > 0].astype(np.float)[:,None]
 
   np.savetxt(_file, result, fmt='%.6le')
+
+  if noplot:
+    exit(0)
   
 else:
   result    = np.loadtxt(_file)
@@ -158,9 +161,6 @@ else:
   skies.remove('plver')
 
   skies     = skies + ['plverf']
-
-if noplot:
-  exit(0)
   
 ##
 ncol        = 2
@@ -190,8 +190,6 @@ else:
   result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
 
 ##
-vmaxs       = np.quantile(result, 0.55, axis=1)
-
 for i, _ in enumerate(skies):
   row = i % nrow
   col = i % 2
@@ -219,7 +217,7 @@ for i, _ in enumerate(skies):
   vmax         = np.quantile(values, 0.95)
   step         = (vmax - vmin) / 50.
 
-  fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, step, markersize=0.7)
+  fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, step, markersize=0.7, cmap='jet')
   
   if i == 0:
     ylims      = axarr[row][col].get_ylim()
@@ -252,16 +250,16 @@ if plot_elgs:
     tdensity   = tdensity[hpdec > 35.]
     hpdec      = hpdec[hpdec > 35.]
     
-  ##  Wrap randoms.                                                                                                                                                                                                                  
+  ##  Wrap randoms.                                                                                                                                                                                                                 
   hpra[hpra > 300.] -= 360.                                                                                                                                                                                                            
   hpra        += 60.  
     
   ##  Digitize. 
-  mmin         = np.quantile(tdensity, 0.01) 
-  mmax         = np.quantile(tdensity, 0.99)    
+  vmin         =  np.quantile(tdensity, 0.001) 
+  vmax         =  np.quantile(tdensity, 0.999)    
   step         = (vmax - vmin) / 50.
-
-  fast_scatter(axarr[-1][-1], hpra, hpdec, tdensity, mmin, mmax, step)
+  
+  fast_scatter(axarr[-1][-1], hpra, hpdec, tdensity, vmin, vmax, step, cmap='jet')
   
   axarr[-1][-1].set_title('ELG DENSITY')
 

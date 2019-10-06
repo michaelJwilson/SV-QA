@@ -3,10 +3,20 @@ import os
 ##
 nside = 128
 
+runs  = []
+
 for camera in ['decam', '90prime', 'mosaic']:
     for band in ['g', 'r', 'z']:
-        cmd = 'python legacysky_randoms.py {} {} {}'.format(nside, camera, band)
-        
-        print(cmd)
+        runs.append([camera, band])
 
-        os.system(cmd)
+        if camera == 'mosaic':
+          break
+        
+runs  = runs[::-1]
+
+for run in runs:
+  cmd = 'python legacysky_randoms.py {} {} {}'.format(nside, run[0], run[1])
+    
+  print(cmd)
+  
+  os.system(cmd)

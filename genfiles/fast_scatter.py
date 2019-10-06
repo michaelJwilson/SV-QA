@@ -5,26 +5,42 @@ import matplotlib.pyplot as plt
 from   mpl_toolkits.axes_grid1 import   make_axes_locatable
 
 
-def fast_scatter(ax, xs, ys, values, mmin, mmax, step, markersize=0.1):
-  ##  Digitzie.                                                                                                                                                                                                                        
-  points       = step * np.floor(np.clip(values, a_min=mmin, a_max=mmax) / step)
+def fast_scatter(ax, xs, ys, values, mmin, mmax, N, markersize=0.1, cmap='autumn_r', printit=False):
+  ##  Digitzie.
+  step         = (mmax - mmin) / N
+  
+  points       =  mmin + step * np.floor((np.clip(values, a_min=mmin, a_max=mmax) - mmin) / step)
+  points      -=  1.e-1
+  
+  if printit:
+    print(mmin, mmax, N, step)
+    print(np.unique(values))
+    print(np.unique(points))
+  
   levels       = np.unique(points)
 
+  ##
+  indexs       = np.floor((np.clip(levels, a_min=mmin, a_max=mmax) - mmin) / step).astype(np.int)
+  
+  if printit:
+    print(levels)
+  
   if len(levels) > 500:
-    return  0
+    raise  ValueError('{}'.format(levels))
 
   ##  ['Summer', 'Wistia', 'autumn_r']
-  cmap         = plt.get_cmap('autumn_r', len(levels))
-  norm         = matplotlib.colors.Normalize(vmin=levels[0], vmax=levels[1])
+  cmap         = plt.get_cmap(cmap, N)
+  norm         = matplotlib.colors.Normalize(vmin=mmin, vmax=mmax)
 
-  colors       = cmap([1. * x / len(levels) for x in range(len(levels))])
+  colors       = cmap([1. * x / N for x in np.arange(0, N, 1)])
 
   for i, level in enumerate(levels):
     isin       = (points == level)
 
-    print('Plotting level {} of {} - {} targets at {}.'.format(i, len(levels), np.count_nonzero(isin), level))
+    if printit:
+      print('Plotting level {} of {} - {} targets at {}.'.format(i, len(levels), np.count_nonzero(isin), level))
 
-    ax.plot(xs[isin], ys[isin], markersize=markersize, c=colors[i], lw=0, marker='.')
+    ax.plot(xs[isin], ys[isin], markersize=markersize, c=colors[indexs[i]], lw=0, marker='.')
 
   divider      = make_axes_locatable(ax)
 
