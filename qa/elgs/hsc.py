@@ -159,27 +159,28 @@ if __name__ == '__main__':
   '''
 
   hsc             = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}_lite.fits'.format(gcap))[1].data) 
-
+  
   ##  Downsample.
   for i in range(3):
     choice        = np.random.randint(2, size=len(hsc)).astype(bool)
     hsc           = hsc[choice]  
-
+  
   hsc.sort('SNR')
   
   hsc.pprint()
 
   ##
-  mtypes          = ['REX', 'PSF', 'EXP', 'DEV', 'COMP']
-
+  mtypes          = ['PSF', 'EXP', 'DEV', 'COMP', 'REX']
+  colors          = ['b', 'r', 'g', 'k', 'y']
+  
   ##
   for photsys in np.unique(hsc['PHOTSYS']):
     datbysys      = hsc[hsc['PHOTSYS'] == photsys]
 
     ##  
-    fig, axarr      = plt.subplots(nrows=7, ncols=7, figsize=(20, 20))
+    fig, axarr      = plt.subplots(nrows=6, ncols=6, figsize=(20, 20))
     
-    for mm, color in zip(mtypes, ['b', 'y', 'r', 'k', 'g']):
+    for mm, color in zip(mtypes, colors):
       print('Solving for {} ({})'.format(mm, color))
 
       dat           = datbysys[datbysys['MORPHTYPE'] == mm]
@@ -196,14 +197,15 @@ if __name__ == '__main__':
        labels        = [r'gSNR', r'rSNR', r'zSNR', r'SNR', r'FRANKEN-z', 'zPSF']
       
        ##  ['BFIT', r'dChi2'].    
-       _range        = [(0., 50.)] * 4 + [(0.4, 1.6)] + [(0.8, 1.5)]
+       _range        = [(-5., 50.)] * 4 + [(0.4, 1.6)] + [(0.8, 1.5)]
 
-       percentiles   = []  ##  [0.05, 0.1, 0.25, 0.5, 0.75]   
-     
-       ##  labels=labels
-       fig           = corner.corner(data, range=_range, plot_contours=False, color=color, labels=labels,
-                                     quantiles=percentiles, plot_density=False, fig=fig, alpha=0.2,
-                                     show_titles=True, title_kwargs={"fontsize": 12}, data_kwargs={'alpha': 0.1}, hist_kwargs={'log': True})
+       ##  [0.05, 0.1, 0.25, 0.5, 0.75]
+       percentiles   = []
+
+       ##  data_kwargs={'alpha': 0.2}.
+       fig           = corner.corner(data, plot_contours=False, color=color, labels=labels, range=_range, 
+                                     quantiles=percentiles, plot_density=False, fig=fig, hist_kwargs={'log': True},
+                                     show_titles=True)
         
     fig.suptitle(r'0.5 $\leq z \leq 1.6$ HSC-PDR1 in {}'.format(photsys), fontsize=20)
     
