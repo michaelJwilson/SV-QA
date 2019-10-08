@@ -29,14 +29,17 @@ rc('text', usetex=True)
 nside          = np.int(sys.argv[1])
 parea          = hp.nside2pixarea(nside, degrees = True)
 
-def read_elgs(mtype, snr, ext):
+def read_elgs(mtype, cutlevel, ext):
   ##  [hpind, hpra, hpdec, tdensity].
-  return  np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}_{:d}{}_{:d}.npy'.format(mtype, snr, ext, nside))
+  ##  return  np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}_{:d}{}_{:d}.npy'.format(mtype, snr, ext, nside))
+
+  return  np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}_{:.1f}{}_{:d}.npy'.format(mtype, cutlevel, ext, nside))    
   
     
 if __name__ == '__main__':    
-  ext        = '_r_z'
+  ext        = '_chi2'
 
+  dchi2      = [-2.5, -2.0, -1.5, -1.0, -0.5, 0.0]
   snrs       = [3, 4, 6, 9, 12, 20]
   
   mtypes     = ['DEV', 'COMP', 'EXP', 'REX', 'PSF']
@@ -47,13 +50,13 @@ if __name__ == '__main__':
   
   ##
   for i, mtype in enumerate(mtypes):
-    for j, snr in enumerate(snrs):
-      hmap                         = read_elgs(mtype, snr, ext)
+    for j, cutlevel in enumerate(dchi2):
+      hmap                         = read_elgs(mtype, cutlevel, ext)
       hpind, hpra, hpdec, tdensity = np.hsplit(hmap, 4)
 
       hpra, hpdec, tdensity        = hpra.flatten(), hpdec.flatten(), tdensity.flatten()
               
-      print(mtype, snr, np.unique(tdensity, return_counts=True))
+      print(mtype, cutlevel, np.unique(tdensity, return_counts=True))
       
       hpra[hpra > 300.] -= 360.                                                                                                                                                                               
       hpra  += 60.
@@ -61,11 +64,11 @@ if __name__ == '__main__':
       vmin   = np.quantile(tdensity, 0.001)
       vmax   = np.quantile(tdensity, 0.999)
 
-      print(mtype, snr, vmin, vmax)
+      print(mtype, cutlevel, vmin, vmax)
       
       fast_scatter(axarr[i][j], hpra, hpdec, tdensity, vmin, vmax, 50, cmap='jet', printit=False)
 
-      axarr[i][j].set_title(r'{} ELG $r,z$ SNR $\geq {})$'.format(mtype, snr))
+      axarr[i][j].set_title(r'{} ELG  ($ \Delta \chi^2 \geq$ {})'.format(mtype, cutlevel))
       axarr[i][j].set_xlim(360., 0.)
 
   pl.savefig('../../genfiles/elgs/skydepths/elgs{}.png'.format(ext))

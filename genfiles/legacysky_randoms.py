@@ -1,5 +1,6 @@
 import  os
 import  sys
+import  json
 import  glob
 import  fitsio
 import  matplotlib
@@ -59,7 +60,8 @@ skies       = ['exptime',\
                'minsky',\
                'maxsky',\
                'fwhm',\
-               'plver']
+               'plver',\
+               'airmass']
 
 def remap(x, printit=False):  
   uentries, cnts = np.unique(x, return_counts = True)
@@ -87,8 +89,10 @@ def remap(x, printit=False):
 randoms     = fitsio.FITS('/project/projectdirs/desi/target/catalogs/dr8/0.31.0/randoms/randoms-inside-dr8-0.31.0-2.fits')
 randoms     = randoms[1]['RA', 'DEC'][:nrandom]
 
-_file       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/skies/skies_{}_{}.txt'.format(camera.decode('UTF-8'), band.decode('UTF-8'))
+##  randoms     = Table(fits.open('/project/projectdirs/desi/target/catalogs/dr8/0.31.0/randoms/randoms-inside-dr8-0.31.0-2.fits')[1].data)
+##  randoms.pprint()
 
+_file       = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/skies/skies_{}_{}.txt'.format(camera.decode('UTF-8'), band.decode('UTF-8'))
 nfail       = 0
 
 if (not os.path.exists(_file)) | recompute:
@@ -161,6 +165,10 @@ else:
   skies.remove('plver')
 
   skies     = skies + ['plverf']
+
+
+##  Make room for Airmass in plot. 
+skies.remove('MAXSKY')
   
 ##
 ncol        = 2
@@ -183,12 +191,26 @@ randoms     = randoms[(-30. < randoms['DEC'])]
 if camera   == b'decam':
   result, randoms = [result[(randoms['DEC'] < 30.)], randoms[(randoms['DEC'] < 30.)]]
 
+  with open(filename, 'r') as f:
+    des_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DES_pearson.json')
+    ngc_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-NGC_pearson.json')
+    sgc_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-SGC_pearson.json')
+
+    rrs           = {'DES':  des_rr, 'DCLS-NGC':  ngc_rr, 'DCLS-SGC':  sgc_rr}
+    
 elif camera == b'90prime':
   result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
+  bmzls_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/BMZLS_pearson.json')
 
+  rrs             = {'BMZLS':  bmzls_rr}
+  
 else:
   result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
 
+  bmzls_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/BMZLS_pearson.json')
+  rrs             = {'BMZLS':  bmzls_rr}
+  
+  
 ##
 for i, _ in enumerate(skies):
   row = i % nrow
@@ -230,11 +252,26 @@ if plot_elgs:
   nside        = 512
 
   binary       = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/healmaps/elg_tdensity_{}.npy'.format(nside))
-  hpind        = binary[:,0]
+  hpind        = binary[:,0].astype(np.int)
   hpra         = binary[:,1]
   hpdec        = binary[:,2]
   tdensity     = binary[:,3]
-
+  
+  pix_mask     = np.load('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/elgs/pix_area.npy')
+  
+  mhpind       = pix_mask[:,0]
+  mhpra        = pix_mask[:,1]
+  mhpdec       = pix_mask[:,2]
+ 
+  mask         = pix_mask[:,3]
+  
+  ##
+  inmask       = hpind[mask[hpind] > 0.0]
+  ##  tinmask  = [x in inmask for x in hpind]
+  
+  ##
+  ##  tdensity[tinmask] /= mask[inmask]
+  
   ##  Cut to non-DES.                                                                                                                                                                                                                 
   hpra         = hpra[hpdec > -30.]
   tdensity     = tdensity[hpdec > -30.]
@@ -271,6 +308,6 @@ fig.suptitle(r'{}      ${}$-band'.format(camera.decode('UTF-8').upper(), band.de
   
 print('Number of failures: {}'.format(nfail))
   
-pl.savefig('skydepths/skydepth_{}_{}.pdf'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
+pl.savefig('skydepths/skydepth_{}_{}.png'.format(camera.decode('UTF-8'), band.decode('UTF-8')))
 
 print('\n\nDone.\n\n')

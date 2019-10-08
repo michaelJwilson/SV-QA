@@ -37,7 +37,7 @@ if __name__ == '__main__':
  scratch   = os.environ['CSCRATCH']
  truthdir  = '/project/projectdirs/desi/target/analysis/truth/dr8.0/'
 
- gcap      = 'south'
+ gcap      = 'north'
  snr       =      9
  compute   =  False
  
@@ -121,7 +121,7 @@ if __name__ == '__main__':
 
   cols             = ['FRANKENZ', 'MORPHTYPE', 'GSNR', 'RSNR', 'ZSNR', 'RZSNR', 'SNR', 'EBV', 'CHI2DIFF', 'FLUX_G', 'FLUX_R', 'FLUX_Z', 'FLUX_W1',\
                       'PSFSIZE_G', 'PSFSIZE_R', 'PSFSIZE_Z', 'MIZUKIZ', 'PHOTSYS', 'BFIT', 'BFIT2']
-  '''
+  
   hsc              = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}.fits'.format(gcap))[1].data)
   hsc              = hsc[(hsc['FRANKENZ'] >= 0.5) & (hsc['FRANKENZ'] < 1.6)]
   hsc              = hsc[hsc['DEC'] > -30.]
@@ -156,12 +156,12 @@ if __name__ == '__main__':
   hsc             = hsc[cols]
 
   hsc.write(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}_lite.fits'.format(gcap), format='fits', overwrite=True)
-  '''
+  
 
   hsc             = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}_lite.fits'.format(gcap))[1].data) 
   
   ##  Downsample.
-  for i in range(3):
+  for i in range(2):
     choice        = np.random.randint(2, size=len(hsc)).astype(bool)
     hsc           = hsc[choice]  
   
@@ -172,13 +172,15 @@ if __name__ == '__main__':
   ##
   mtypes          = ['PSF', 'EXP', 'DEV', 'COMP', 'REX']
   colors          = ['b', 'r', 'g', 'k', 'y']
+
+  photsyss        = ['BMZLS'] ##  np.unique(hsc['PHOTSYS'])
   
   ##
-  for photsys in np.unique(hsc['PHOTSYS']):
-    datbysys      = hsc[hsc['PHOTSYS'] == photsys]
+  for photsys in photsyss:
+    datbysys        = hsc[hsc['PHOTSYS'] == photsys]
 
     ##  
-    fig, axarr      = plt.subplots(nrows=6, ncols=6, figsize=(20, 20))
+    fig, axarr      = plt.subplots(nrows=7, ncols=7, figsize=(20, 20))
     
     for mm, color in zip(mtypes, colors):
       print('Solving for {} ({})'.format(mm, color))
@@ -191,13 +193,13 @@ if __name__ == '__main__':
 
       if len(dat) > 0:       
        ##  np.log10(dat['BFIT']), dat['CHI2DIFF']].   
-       data          = np.c_[dat['GSNR'], dat['RSNR'], dat['ZSNR'], dat['SNR'], dat['FRANKENZ'], dat['PSFSIZE_Z']]
+       data          = np.c_[dat['GSNR'], dat['RSNR'], dat['ZSNR'], dat['SNR'], dat['FRANKENZ'], dat['PSFSIZE_Z'], dat['CHI2DIFF']]
 
        ##  ['BFIT', r'dChi2'].    
-       labels        = [r'gSNR', r'rSNR', r'zSNR', r'SNR', r'FRANKEN-z', 'zPSF']
+       labels        = [r'gSNR', r'rSNR', r'zSNR', r'SNR', r'FRANKEN-z', 'zPSF', 'CHI2DIFF']
       
        ##  ['BFIT', r'dChi2'].    
-       _range        = [(-5., 50.)] * 4 + [(0.4, 1.6)] + [(0.8, 1.5)]
+       _range        = [(-5., 50.)] * 4 + [(0.4, 1.6)] + [(0.8, 1.5)] + [(-6., 6.)]
 
        ##  [0.05, 0.1, 0.25, 0.5, 0.75]
        percentiles   = []
