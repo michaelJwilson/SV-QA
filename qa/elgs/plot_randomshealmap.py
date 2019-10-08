@@ -1,5 +1,6 @@
 import  os
 import  sys
+import  json
 import  glob
 import  fitsio
 import  matplotlib
@@ -25,7 +26,7 @@ from    phot_sys                               import   set_photsys
 
 
 rc('font', **{'family':'serif', 'serif':['Times']})
-rc('text', usetex=True)
+##  rc('text', usetex=True)
 
 ##
 nside           = np.int(sys.argv[1])
@@ -82,6 +83,13 @@ if __name__ == '__main__':
   hpra  += 60.
 
   common, x_ind, y_ind = np.intersect1d(rhpind, hpind, return_indices=True) 
+
+  des_rr          = json.load(open('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DES_pearson.json', 'r'))
+  ngc_rr          = json.load(open('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-NGC_pearson.json', 'r'))
+  sgc_rr          = json.load(open('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-SGC_pearson.json', 'r'))
+  bmzls_rr        = json.load(open('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/BMZLS_pearson.json', 'r'))
+  
+  rrs             = {'DES':  des_rr, 'DCLS-NGC':  ngc_rr, 'DCLS-SGC':  sgc_rr, 'BMZLS':  bmzls_rr}
   
   ##
   for count, toplot in enumerate(cols):
@@ -100,6 +108,16 @@ if __name__ == '__main__':
       
     fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, 50, cmap='jet', printit=False)
 
+    ##  label    = r'$r \simeq$ {:.2e}'.format(rr[0])
+    label        = ''
+
+    for x in rrs.keys():
+      survey     = x.strip() + ':  '
+      survey    += '{:+.3f}'.format(rrs[x][toplot]).strip()
+      survey    += '\n'
+      label     += survey
+
+    ##
     toplot       = toplot.split('_')
 
     if toplot[-1][0] != 'W':
@@ -108,10 +126,8 @@ if __name__ == '__main__':
     ##
     axarr[row][col].set_title(r'${}$-{}'.format(toplot[-1], toplot[0].upper()))
     axarr[row][col].set_xlim(360., 0.)
-    
-    label        = r'$r \simeq$ {:.2e}'.format(rr[0]) 
-    
-    axarr[row][col].text(75., 70., label)
+
+    axarr[row][col].text(120., 35., label)
     
   ##   
   pl.savefig('../../genfiles/elgs/skydepths/depths.png')

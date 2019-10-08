@@ -21,6 +21,7 @@ from    desitarget.geomask                    import   is_in_box
 from    desitarget.targetmask                 import   desi_mask
 from    mpl_toolkits.axes_grid1               import   make_axes_locatable
 from    mpl_toolkits.axes_grid1.inset_locator import   inset_axes
+from    make_mask                             import   get_hone
 
 
 ##  plt.style.use(['dark_background'])
@@ -162,13 +163,24 @@ if (not os.path.exists(_file)) | recompute:
 else:
   result    = np.loadtxt(_file)
 
+  ##  Make room for Airmass in plot.
   skies.remove('plver')
-
   skies     = skies + ['plverf']
 
+  result    = Table(data=result, names=skies)
 
-##  Make room for Airmass in plot. 
-skies.remove('MAXSKY')
+  ##
+  del  result['minsky']
+  del  result['maxsky']
+
+  ##
+  skies.remove('minsky')
+  skies.remove('maxsky')
+
+  result.pprint()
+
+##
+skies       = skies + ['HI']
   
 ##
 ncol        = 2
@@ -190,63 +202,78 @@ randoms     = randoms[(-30. < randoms['DEC'])]
 
 if camera   == b'decam':
   result, randoms = [result[(randoms['DEC'] < 30.)], randoms[(randoms['DEC'] < 30.)]]
-
-  with open(filename, 'r') as f:
-    des_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DES_pearson.json')
-    ngc_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-NGC_pearson.json')
-    sgc_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/DECALS-SGC_pearson.json')
-
-    rrs           = {'DES':  des_rr, 'DCLS-NGC':  ngc_rr, 'DCLS-SGC':  sgc_rr}
-    
-elif camera == b'90prime':
-  result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
-  bmzls_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/BMZLS_pearson.json')
-
-  rrs             = {'BMZLS':  bmzls_rr}
-  
+      
 else:
   result, randoms = [result[(randoms['DEC'] > 35.)], randoms[(randoms['DEC'] > 35.)]]
-
-  bmzls_rr        = json.load('/global/homes/m/mjwilson/BGS/SV-ASSIGN/qa/elgs/dat/BMZLS_pearson.json')
-  rrs             = {'BMZLS':  bmzls_rr}
-  
   
 ##
 for i, _ in enumerate(skies):
   row = i % nrow
   col = i % 2
   
-  print(row, col)
+  print(i, row, col, _)
 
-  nresult  = result[:,i]
+  if _ == 'HI':
+    hpra, hpdec, values = get_hone()
 
-  isin     = np.isfinite(nresult)
+    ##  Cut to non-DES.
+    isin         = hpdec > -30.
 
-  nresult  = nresult[isin]
-  ##  nresult  = nresult - np.median(nresult)
-  ##  nresult /= np.std(nresult)
+    values       = values[isin]
+    hpra         = hpra[isin]
+    hpdec        = hpdec[isin]
+    
+    if camera   == b'decam':
+      isin       = hpdec < 30.
 
-  parea        = hp.nside2pixarea(nside, degrees = True)
-  hppix        = hp.ang2pix(nside, (90. - randoms['DEC'][isin]) * np.pi / 180., randoms['RA'][isin] * np.pi / 180., nest=False)
-  hpind, cnts  = np.unique(hppix, return_counts=True)
+      values     = values[isin]
+      hpra       = hpra[isin]
+      hpdec      = hpdec[isin]
+
+    else:
+      isin       = hpdec > 35.
+
+      values     = values[isin]
+      hpra       = hpra[isin]
+      hpdec      = hpdec[isin]
+
+    ##  Wrap randoms                                                                                                                                                                                                     
+    hpra[hpra > 300.] -= 360.
+    hpra              += 60.
+
+    vmin         = values.min()
+    vmax         = values.max()
+    
+  else:
+    nresult      = result[_]
+
+    isin         = np.isfinite(nresult)
+    
+    nresult      = nresult[isin]
+    ##  nresult  = nresult - np.median(nresult)
+    ##  nresult /= np.std(nresult)
+
+    parea        = hp.nside2pixarea(nside, degrees = True)
+    hppix        = hp.ang2pix(nside, (90. - randoms['DEC'][isin]) * np.pi / 180., randoms['RA'][isin] * np.pi / 180., nest=False)
+    hpind, cnts  = np.unique(hppix, return_counts=True)
   
-  theta,phi    = hp.pix2ang(nside, hpind, nest=False)
-  hpra, hpdec  = 180. / np.pi * phi, 90. -180. / np.pi * theta
+    theta,phi    = hp.pix2ang(nside, hpind, nest=False)
+    hpra, hpdec  = 180. / np.pi * phi, 90. -180. / np.pi * theta
 
-  values       = np.array([np.mean(nresult[hppix == x]) for x in hpind])
+    values       = np.array([np.mean(nresult[hppix == x]) for x in hpind])
 
-  vmin         = np.quantile(values, 0.05)
-  vmax         = np.quantile(values, 0.95)
-  step         = (vmax - vmin) / 50.
+    vmin         = np.quantile(values, 0.05)
+    vmax         = np.quantile(values, 0.95)
 
-  fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, step, markersize=0.7, cmap='jet')
+  ##
+  fast_scatter(axarr[row][col], hpra, hpdec, values, vmin, vmax, 50, markersize=0.7, cmap='jet')
   
   if i == 0:
-    ylims      = axarr[row][col].get_ylim()
+    ylims        = axarr[row][col].get_ylim()
   
   axarr[row][col].set_title(skies[i].upper())
   axarr[row][col].set_xlim(360., 0.)
-
+  
 ##  
 if plot_elgs:
   nside        = 512
@@ -266,7 +293,7 @@ if plot_elgs:
   mask         = pix_mask[:,3]
   
   ##
-  inmask       = hpind[mask[hpind] > 0.0]
+  ##  inmask   = hpind[mask[hpind] > 0.0]
   ##  tinmask  = [x in inmask for x in hpind]
   
   ##
@@ -287,20 +314,19 @@ if plot_elgs:
     tdensity   = tdensity[hpdec > 35.]
     hpdec      = hpdec[hpdec > 35.]
     
-  ##  Wrap randoms.                                                                                                                                                                                                                 
+  ##  Wrap randoms.
   hpra[hpra > 300.] -= 360.                                                                                                                                                                                                            
   hpra        += 60.  
     
   ##  Digitize. 
   vmin         =  np.quantile(tdensity, 0.001) 
   vmax         =  np.quantile(tdensity, 0.999)    
-  step         = (vmax - vmin) / 50.
-  
-  fast_scatter(axarr[-1][-1], hpra, hpdec, tdensity, vmin, vmax, step, cmap='jet')
-  
+
+  fast_scatter(axarr[-1][-1], hpra, hpdec, tdensity, vmin, vmax, 50, cmap='jet')
+
   axarr[-1][-1].set_title('ELG DENSITY')
 
-  axarr[-1][-1].set_xlim(360., 0.)
+  axarr[-1][-1].set_xlim(365., -5.)
   axarr[-1][-1].set_ylim(ylims)
 
 ##
