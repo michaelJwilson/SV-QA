@@ -6,8 +6,8 @@ import  healpy    as  hp
 
 def prep_indes(nside=256, fname=None):
     if fname  == None:
+      ##  '/global/cscratch1/sd/raichoor/desits/des.ply' 
       fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'
-      fname    = '/global/cscratch1/sd/raichoor/desits/des.ply'
 
     ##                                                                                                                                                                                                                         
     nside      = np.int(nside)
@@ -16,7 +16,7 @@ def prep_indes(nside=256, fname=None):
     # checking hp pixels                                                                                                                                                                                                        
     mng        = pymangle.Mangle(fname)
 
-    theta,phi  = hp.pix2ang(nside, np.arange(0, npix, 1), nest=False)
+    theta, phi = hp.pix2ang(nside, np.arange(0, npix, 1), nest=False)
     hpra,hpdec = 180. / np.pi * phi, 90. -180. / np.pi * theta
 
     allhp      = mng.polyid(hpra, hpdec)
@@ -42,8 +42,8 @@ def prep_indes(nside=256, fname=None):
 
 def in_des(ra, dec, nside=256, fname=None, verbose=True):
   if fname  == None:
+    ##  '/global/cscratch1/sd/raichoor/desits/des.ply'  
     fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'
-    fname    = '/global/cscratch1/sd/raichoor/desits/des.ply'
 
   try:
     if verbose:

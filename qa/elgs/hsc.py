@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
       ##  hsc.pprint()
 
-  cols  = hsc.columns
+  cols  =  hsc.columns
   ecols = elgs.columns
   
   diff  = list(set(cols)  ^ set(ecols))

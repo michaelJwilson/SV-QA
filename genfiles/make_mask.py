@@ -15,22 +15,6 @@ from   fast_scatter         import fast_scatter
 from   astropy.coordinates  import SkyCoord
 
 
-def G_to_C(mapi, nside, nest=False):
-    """ 
-    Rotates from Galactic to celestial coordinates.
-    """
-    thph        = hp.pix2ang(nside, np.arange(hp.nside2npix(nside)), nest=nest)
-    
-    r           = hp.Rotator(coord=['C', 'G'])
-    thphg       = r(thph[0], thph[1])
-    
-    hpix        = hp.ang2pix(nside, thphg[0], thphg[1])
-    eqmap       = mapi[hpix]
-    
-    hpra, hpdec = 180. / np.pi * thphg[1], 90. - 180. / np.pi * thphg[0]
-    
-    return  hpra, hpdec, eqmap
-
 def get_gaia():
   files  = glob.glob('/project/projectdirs/cosmo/work/gaia/chunks-gaia-dr2-astrom/*.fits')
   ##  print(files)
@@ -51,7 +35,6 @@ def get_gaia():
     
   return  result[1:]
 
-
 def get_tycho():
   _file    = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/tycho2.kd.fits'
   dat      = Table(fits.open(_file)[1].data)
@@ -63,38 +46,50 @@ def get_tycho():
 
   return  dat
 
-def get_hone(nside=256, printit=False):
+def get_HI(nside=256, plotit=False, printit=False):
   ''' 
   Reads Lenz et. al. (1610.06175) HI column density. 
-  Native resolution:  16.2 arcmin. (nside=256, 13.74 arcmin). 
+  
+  Native resolution:  16.2 arcmin -- nside=256 = 13.74 arcmin. 
 
-  https://github.com/mehdirezaie/LSSutils/blob/master/LSSutils/extrn/GalacticForegrounds/hpmaps.py#L44-L76
+  https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/AFJNWJ#
+  https://nbviewer.jupyter.org/github/DanielLenz/ebv_tools/blob/master/examples.ipynb
   '''
 
-  nside_in           = 1024        
-  ordering           = 'ring'
-  unit               = 'Lenz et. al. HI'
-        
-  _file              = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/NHI_HPX.fits', lower=True)
+  _ebv               = hp.read_map(os.environ['SCRATCH'] + '/BGS/SV-ASSIGN/ebv_lhd.hpx.fits', verbose=False)
 
-  hdr                = fitsio.read_header('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/NHI_HPX.fits')
-  
-  nhi                = _file[1].read()['nhi']
-  
+  _nside             = hp.get_nside(ebv)
+  _npix              = hp.nside2npix(_nside)
+  _ordering          = 'ring'
+
+  if plotit:  
+    hp.mollview(np.log10(_ebv), title='Lenz++', unit='log(E(B-V) [mag])')
+    pl.show()
+
   ##  Cast to new resolution.
-  nhi                = hp.pixelfunc.ud_grade(nhi, nside, order_in=ordering) 
-  nhi                = np.clip(nhi, a_min=nhi[nhi > 0.0].min(), a_max = None)
+  ebv                = hp.pixelfunc.ud_grade(_ebv, nside, order_in=_ordering) 
+
+  ##  np.clip(ebv, a_min=ebv[ebv > 0.0].min(), a_max = None)
+
+  assert  np.all(ebv > 0.0)
 
   if printit:
-    print(nside, np.count_nonzero(nhi < 0.0), len(nhi))
-    print(np.sort(nhi))
-  
-  hpra, hpdec, eqmap = G_to_C(nhi, nside)  
+    print(nside, np.count_nonzero(ebv < 0.0), len(ebv))
+    print(np.sort(ebv))
 
-  ##  https://en.wikipedia.org/wiki/International_Celestial_Reference_System
-  hpra[hpra < 0.]   += 360.
-  
-  return  hpra, hpdec, np.log10(nhi)
+  ## 
+  theta, phi  = hp.pix2ang(nside, np.arange(hp.nside2npix(nside)), nest=False)
+  hpra, hpdec = 180. / np.pi * phi, 90. - 180. / np.pi * theta
+
+  s           = SkyCoord(ra = hpra * u.degree, dec = hpdec * u.degree, frame='icrs')
+  s           = s.galactic
+
+  glon        = s.l.value
+  glat        = s.l.b.value
+        
+  pix         = hp.ang2pix(nside, glon, glat, lonlat=True)
+
+  return  hpra, hpdec, np.log10(ebv_map[pix])
   
 
 if __name__ == '__main__':
@@ -119,7 +114,7 @@ if __name__ == '__main__':
   tycho.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/tycho_stellar_mask.fits')
   '''
 
-  hpra, hpdec, loghi  = get_hone(1024)
+  hpra, hpdec, loghi  = get_HI(1024)
   
   print(hpra.min(), hpra.max())
   
