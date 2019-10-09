@@ -37,7 +37,7 @@ if __name__ == '__main__':
  scratch   = os.environ['CSCRATCH']
  truthdir  = '/project/projectdirs/desi/target/analysis/truth/dr8.0/'
 
- gcap      = 'north'
+ gcap      = 'south'
  snr       =      9
  compute   =  False
  
@@ -104,7 +104,7 @@ if __name__ == '__main__':
   
   hsco.pprint(max_width=-1)
   hsco.write(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}.fits'.format(gcap), format='fits', overwrite=True)
-  
+
   exit(1)
   
   ##
@@ -120,7 +120,7 @@ if __name__ == '__main__':
   plt.subplots_adjust(left = 0.05, right = 0.95, hspace=0.6, wspace=0.4, top = 0.925, bottom = 0.05)
 
   cols             = ['FRANKENZ', 'MORPHTYPE', 'GSNR', 'RSNR', 'ZSNR', 'RZSNR', 'SNR', 'EBV', 'CHI2DIFF', 'FLUX_G', 'FLUX_R', 'FLUX_Z', 'FLUX_W1',\
-                      'PSFSIZE_G', 'PSFSIZE_R', 'PSFSIZE_Z', 'MIZUKIZ', 'PHOTSYS', 'BFIT', 'BFIT2']
+                      'PSFSIZE_G', 'PSFSIZE_R', 'PSFSIZE_Z', 'MIZUKIZ', 'PHOTSYS', 'BFIT', 'BFIT2', 'TARGETID', 'RA', 'DEC', 'BRICKID', 'OBJID']
   
   hsc              = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}.fits'.format(gcap))[1].data)
   hsc              = hsc[(hsc['FRANKENZ'] >= 0.5) & (hsc['FRANKENZ'] < 1.6)]
@@ -133,11 +133,13 @@ if __name__ == '__main__':
   hsc['PHOTSYS'][hsc['DEC'] < 32.375] = 'S'
   
   set_photsys(hsc)
-    
+
+  hsc.pprint()
+  
   ##  S/N should be prior to extinction correction.                                                                                                                                                                         
-  hsc['GSNR']  = np.sqrt(hsc['FLUX_IVAR_G']) * hsc['FLUX_G']                                                                                                                               
-  hsc['RSNR']  = np.sqrt(hsc['FLUX_IVAR_R']) * hsc['FLUX_R']                                                                                                                                 
-  hsc['ZSNR']  = np.sqrt(hsc['FLUX_IVAR_Z']) * hsc['FLUX_Z']                                                                                                                               
+  hsc['GSNR']     = np.sqrt(hsc['FLUX_IVAR_G']) * hsc['FLUX_G']                                                                                                                               
+  hsc['RSNR']     = np.sqrt(hsc['FLUX_IVAR_R']) * hsc['FLUX_R']                                                                                                                                 
+  hsc['ZSNR']     = np.sqrt(hsc['FLUX_IVAR_Z']) * hsc['FLUX_Z']                                                                                                                               
 
   ##                                                                                                                                                                                                                        
   hsc['RZSNR']    = np.sqrt(hsc['RSNR'] ** 2. + hsc['ZSNR'] ** 2.)
@@ -156,7 +158,8 @@ if __name__ == '__main__':
   hsc             = hsc[cols]
 
   hsc.write(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}_lite.fits'.format(gcap), format='fits', overwrite=True)
-  
+
+  exit(1)
 
   hsc             = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_{}_lite.fits'.format(gcap))[1].data) 
   
