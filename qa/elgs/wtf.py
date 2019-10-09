@@ -3,24 +3,24 @@ import  glob
 import  numpy               as      np 
 import  astropy.io.fits     as      fits
  
-from    astropy.table       import  Table
+from    astropy.table       import  Table, join
 from    desitarget.targets  import  encode_targetid
 
 
 print('Welcome.')
 
 scratch = os.environ['CSCRATCH']
-'''
+
 ##
 dat     = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_north_lite.fits')[1].data)
-dat     = dat[dat['PHOTSYS'] == 'DES']
+##  dat     = dat[dat['PHOTSYS'] == 'DES']
 
 ##  dat.sort('GSNR')
 
 dat.pprint(max_lines=250)
 
 print('\n\n')
-'''
+
 ## 
 ##  scratch = os.environ['CSCRATCH']
 ##  elgs    = Table(fits.open(scratch + '/BGS/SV-ASSIGN/elgs/hsc_north_lite.fits')[1].data)
@@ -39,30 +39,35 @@ names    = ['TARGETID', 'BRICKID', 'OBJID'] + apf_namg + apf_namr + apf_namz + [
 tractors                        =  glob.glob(scratch + '/BGS/SV-ASSIGN/new_tractors/*/*.fits')
 
 for tractor in tractors:
-  ##                                                                                                                                                                                                                                   
-  tractor                       =  Table(fits.open(tractor)[0].data, names=names)
-  columns                       =  [x.upper() for x in tractor.columns]
+  try:                                                                                                                                                                                                                                 
+    tractor                     =  Table(fits.open(tractor)[0].data, names=names)
+    columns                     =  [x.upper() for x in tractor.columns]
+  
+  except:
+    print('Ignoring failure on {}.'.format(tractor))
+    continue
 
-  '''
-  ##
-  tractor                       =  Table(tractor, names=columns)
-  tractor['TARGETID']           =  encode_targetid(objid=tractor['OBJID'], brickid=tractor['BRICKID'], release=tractor['RELEASE'], mock=0, sky=0)
-  tractor['APFLUX_RADII']       =  np.array([[0.5, 0.75, 1.0, 1.5, 2.0, 3.5, 5.0, 7.0]] * len(tractor))  ##  arcsec.
+  ##  arcsec.
+  tractor['APFLUX_RADII']       =  np.array([[0.5, 0.75, 1.0, 1.5, 2.0, 3.5, 5.0, 7.0]] * len(tractor))
 
-  ##  [ NANOMAGGIES PER SQ. ARCSEC].
-  tractor['APFLUX_RESID_7M5_G'] = (tractor['APFLUX_RESID_G'][:,7] - tractor['APFLUX_RESID_G'][:,6]) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
-  tractor['APFLUX_RESID_7M5_R'] = (tractor['APFLUX_RESID_R'][:,7] - tractor['APFLUX_RESID_R'][:,6]) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
-  tractor['APFLUX_RESID_7M5_Z'] = (tractor['APFLUX_RESID_Z'][:,7] - tractor['APFLUX_RESID_Z'][:,6]) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
+  ##  [NANOMAGGIES PER SQ. ARCSEC].
+  tractor['APFLUX_RESID_7M5_G'] = (tractor['APFLUX_RESID_G_7p0'] - tractor['APFLUX_RESID_G_5p0']) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
+  tractor['APFLUX_RESID_7M5_R'] = (tractor['APFLUX_RESID_R_7p0'] - tractor['APFLUX_RESID_R_5p0']) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
+  tractor['APFLUX_RESID_7M5_Z'] = (tractor['APFLUX_RESID_Z_7p0'] - tractor['APFLUX_RESID_Z_5p0']) / (np.pi * (tractor['APFLUX_RADII'][:,7]**2. - tractor['APFLUX_RADII'][:,6]**2.))
 
   tractor.sort('APFLUX_RESID_7M5_G')
 
-  del tractor['APFLUX_RESID_G']
-  del tractor['APFLUX_RESID_R']
-  del tractor['APFLUX_RESID_Z']
-  del tractor['APFLUX_RADII']
-  '''
+  del  tractor['APFLUX_RADII']
+  
   tractor.pprint()
 
-  break
+  matched                       = join(dat, tractor, keys=['TARGETID'], join_type='inner')
+
+  if len(matched) > 0:
+    matched.pprint()
+
+    print('Success!')
+
+    exit(0)
 
 print('\n\nDone.\n\n')

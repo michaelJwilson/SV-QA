@@ -127,6 +127,10 @@ if __name__ == '__main__':
   hsc              = hsc[hsc['DEC'] > -30.]
   hsc['MORPHTYPE'] = hsc['TYPE']
   hsc['MIZUKIZ']   = hsc['mizuki_photoz_best']
+
+  hsc.pprint()
+
+  exit(1)
   
   ##
   hsc['PHOTSYS']                      = Column(data=np.array(['N'] * len(hsc)), name='PHOTSYS', dtype='S32')
