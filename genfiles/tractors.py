@@ -14,6 +14,8 @@ from    fitsio              import  FITS, FITSHDR
 cols         = ['release', 'brick_primary', 'apflux_resid_g', 'apflux_resid_r', 'apflux_resid_z', 'brickid', 'objid']
 mcols        = ['psf_flux', 'psf_flux_ivar', 'rex_flux', 'rex_flux_ivar', 'brickid', 'objid']
 
+verbose      =  False
+
 for hsphere in ['north']:  ##  ['north', 'south']
   tractors   = glob.glob('/global/project/projectdirs/cosmo/data/legacysurvey/dr8/{}/tractor/*/*.fits'.format(hsphere))[::-1]
   
@@ -31,6 +33,7 @@ for hsphere in ['north']:  ##  ['north', 'south']
     _output  = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tractors/{}/{}/{}.fits'.format(hsphere, _dir, name)
 
     done     = os.path.exists(_output)
+    done     = False
     
     if not done:
       print('Solving for {} of {}.'.format(i, len(tractors)))
@@ -44,8 +47,6 @@ for hsphere in ['north']:  ##  ['north', 'south']
       dtypes   = tractor[1].get_rec_dtype()[0]
 
       data     = np.array(tractor[1][cols][:])
-
-      tid      = encode_targetid(objid=data['objid'], brickid=data['brickid'], release=data['release'], sky=0, mock=0)
 
       tractor.close()
 
@@ -67,7 +68,11 @@ for hsphere in ['north']:  ##  ['north', 'south']
         print('Missing objects:  {}'.format(set(data['objid']) ^ set(mdata['objid'])))
 
         data   = data[:len(mdata)] 
-      
+
+      ##
+      tid      = encode_targetid(objid=data['objid'], brickid=data['brickid'], release=data['release'], sky=0, mock=0)
+
+      ##
       fluxs    = np.zeros((rows, 6))
       ivflux   = np.zeros((rows, 6))
 
@@ -87,20 +92,38 @@ for hsphere in ['north']:  ##  ['north', 'south']
           
             bcounter    += 1
 
-      ##  
-      names    = ['TARGETID', 'apflux_resid_g'.upper(), 'apflux_resid_r'.upper(), 'apflux_resid_z'.upper(), 'PSF_FLUXG', 'PSF_FLUXG_IVAR', 'PSF_FLUXR', 'PSF_FLUXR_IVAR', 'PSF_FLUXZ', 'PSF_FLUXZ_IVAR', 'REX_FLUXG', 'REX_FLUXG_IVAR', 'REX_FLUXR', 'REX_FLUXR_IVAR', 'REX_FLUXZ', 'REX_FLUXZ_IVAR']
+      ##
+      
+      radii    = ['_0p5', '_0p75', '_1p0', '_1p5', '_2p0', '_3p5', '_5p0', '_7p0']
+      apf_namg = ['apflux_resid_g'.upper() + x for x in radii]
+      apf_namr = ['apflux_resid_r'.upper() + x for x in radii]
+      apf_namz = ['apflux_resid_z'.upper() + x for x in radii]
+            
+      names    = ['TARGETID', 'BRICKID', 'OBJID'] + apf_namg + apf_namr + apf_namz + ['PSF_FLUXG', 'PSF_FLUXG_IVAR', 'PSF_FLUXR', 'PSF_FLUXR_IVAR',\
+                  'PSF_FLUXZ', 'PSF_FLUXZ_IVAR', 'REX_FLUXG', 'REX_FLUXG_IVAR', 'REX_FLUXR', 'REX_FLUXR_IVAR', 'REX_FLUXZ', 'REX_FLUXZ_IVAR']
 
       '''
-      output   = Table(data=[tid, data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'], fluxs[:,0], ivflux[:,0], fluxs[:,1], ivflux[:,1], fluxs[:,2], ivflux[:,2], fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5]],\
-                       names=names)
+      output   = Table(data=[tid, data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'], fluxs[:,0], ivflux[:,0],\
+                             fluxs[:,1], ivflux[:,1], fluxs[:,2], ivflux[:,2], fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5]],\
+                             names=names)
       
       output.pprint()
 
       output.write(_output, format='fits', overwrite=True)
       '''
+      
+      outdata   =  np.c_[tid, data['brickid'], data['objid'], data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'],\
+                         fluxs[:,0], ivflux[:,0], fluxs[:,1], ivflux[:,1], fluxs[:,2], ivflux[:,2],\
+                         fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5]]
 
+      ##  print(len(tid), len(data), len(fluxs), len(ivflux))
+
+      if verbose:
+        toprint = Table(data=outdata, names=names)
+        toprint.pprint(max_width=-1)
+        
       output   = FITS(_output, 'rw')
-      output.write(data, names=names)
+      output.write(outdata, names=names)
       
       metrics.close()
 
