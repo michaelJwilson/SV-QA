@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from   mpl_toolkits.axes_grid1 import   make_axes_locatable
 
 
-def fast_scatter(ax, xs, ys, values, mmin, mmax, N, markersize=0.1, cmap='autumn_r', printit=False):
+def fast_scatter(ax, xs, ys, values, mmin, mmax, N, markersize=0.1, cmap='autumn_r', printit=False, alpha=1.0):
   ##  Digitzie.
   step         = (mmax - mmin) / N
   
@@ -40,7 +40,7 @@ def fast_scatter(ax, xs, ys, values, mmin, mmax, N, markersize=0.1, cmap='autumn
     if printit:
       print('Plotting level {} of {} - {} targets at {}.'.format(i, len(levels), np.count_nonzero(isin), level))
 
-    ax.plot(xs[isin], ys[isin], markersize=markersize, c=colors[indexs[i]], lw=0, marker='.')
+    ax.plot(xs[isin], ys[isin], markersize=markersize, c=colors[indexs[i]], lw=0, marker='.', alpha=alpha)
 
   divider      = make_axes_locatable(ax)
 

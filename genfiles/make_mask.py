@@ -1,6 +1,8 @@
 import os
 import glob
+import ephem
 import fitsio
+import astropy
 import astropy.units        as     u
 import pylab                as     pl 
 import healpy               as     hp
@@ -12,9 +14,10 @@ from   astropy.table        import Table
 from   fast_scatter         import fast_scatter
 from   astropy.coordinates  import SkyCoord
 
+
 def G_to_C(mapi, nside, nest=False):
     """ 
-    Rotates from Galactic to Celestial coordinates.
+    Rotates from Galactic to celestial coordinates.
     """
     thph        = hp.pix2ang(nside, np.arange(hp.nside2npix(nside)), nest=nest)
     
@@ -63,9 +66,9 @@ def get_tycho():
 def get_hone(nside=256, printit=False):
   ''' 
   Reads Lenz et. al. (1610.06175) HI column density. 
-  https://github.com/mehdirezaie/LSSutils/blob/master/LSSutils/extrn/GalacticForegrounds/hpmaps.py#L44-L76
+  Native resolution:  16.2 arcmin. (nside=256, 13.74 arcmin). 
 
-  Native resolution:  16.2 arcmin. (nside=256, 13.74 arcmin).
+  https://github.com/mehdirezaie/LSSutils/blob/master/LSSutils/extrn/GalacticForegrounds/hpmaps.py#L44-L76
   '''
 
   nside_in           = 1024        
@@ -73,6 +76,9 @@ def get_hone(nside=256, printit=False):
   unit               = 'Lenz et. al. HI'
         
   _file              = fitsio.FITS('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/NHI_HPX.fits', lower=True)
+
+  hdr                = fitsio.read_header('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/NHI_HPX.fits')
+  
   nhi                = _file[1].read()['nhi']
   
   ##  Cast to new resolution.
@@ -84,6 +90,9 @@ def get_hone(nside=256, printit=False):
     print(np.sort(nhi))
   
   hpra, hpdec, eqmap = G_to_C(nhi, nside)  
+
+  ##  https://en.wikipedia.org/wiki/International_Celestial_Reference_System
+  hpra[hpra < 0.]   += 360.
   
   return  hpra, hpdec, np.log10(nhi)
   
@@ -110,34 +119,37 @@ if __name__ == '__main__':
   tycho.write('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/masks/tycho_stellar_mask.fits')
   '''
 
-  hpra, hpdec, loghi  = get_hone(256)
-  hpra               += 45
+  hpra, hpdec, loghi  = get_hone(1024)
   
   print(hpra.min(), hpra.max())
   
   ##  Wrap randoms                                                                                                                                                                                                             
-  ##  hpra[hpra > 300.]  -= 360.
-  ##  hpra               += 60.
+  hpra[hpra > 300.]  -= 360.
+  hpra               += 60.
   
   vmin                = loghi.min() ##  np.percentile(loghi, 0.001)
   vmax                = loghi.max() ##  np.percentile(loghi, 0.999)
   
   fig, ax             = plt.subplots(nrows=1, ncols=1)
 
-  ##  plt.scatter(hpra, hpdec, loghi, vmin=vmin, vmax=vmax)
-  
-  fast_scatter(ax, hpra, hpdec, loghi, vmin, vmax, 50, markersize=1., cmap='viridis', printit=False)
+  ##
+  fast_scatter(ax, hpra, hpdec, loghi, vmin, vmax, 50, markersize=1., cmap='viridis', printit=False, alpha=0.25)
 
-  ##  ax.set_xlim(360., 0.)
-
-  ls                  = np.arange(0., 360., 1.)
-  gc                  = SkyCoord(l=ls * u.degree, b=np.zeros_like(ls) * u.degree, frame='galactic')
-
-  exit(1)
+  ##
+  ls                  = np.arange(0.1, 359.5, 1.)
+  bs                  = np.zeros_like(ls)
   
-  print(gc.ra.deg)
+  gc                  = SkyCoord(l=ls*u.degree, b=bs*u.degree, frame='galactic', equinox='J2000')
+  gc                  = gc.transform_to('icrs') 
+
+  ind                 = np.argsort(gc.ra.deg)
+
+  ra                  = gc.ra.deg[ind]
+  dec                 =	gc.dec.deg[ind]
   
-  ax.axvline(90., c='k')
+  ax.plot(ra, dec, 'k-')
+
+  ax.set_xlim(360., 0.)
   
   pl.savefig('hone.png')
   
