@@ -11,7 +11,9 @@ from    fitsio              import  FITS, FITSHDR
 
 
 ##
-cols         = ['release', 'brick_primary', 'apflux_resid_g', 'apflux_resid_r', 'apflux_resid_z', 'brickid', 'objid']
+cols         = ['release', 'brick_primary', 'apflux_resid_g', 'apflux_resid_r', 'apflux_resid_z', 'brickid', 'objid',\
+                'apflux_ivar_g', 'apflux_ivar_r', 'z']
+
 mcols        = ['psf_flux', 'psf_flux_ivar', 'rex_flux', 'rex_flux_ivar', 'brickid', 'objid']
 
 verbose      =  False
@@ -112,6 +114,7 @@ for hsphere in ['north']:  ##  ['north', 'south']
       '''
       
       outdata   =  np.c_[tid, data['brickid'], data['objid'], data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'],\
+                         data['apflux_ivar_g'], data['apflux_ivar_r'], data['apflux_ivar_z'],\  
                          fluxs[:,0], ivflux[:,0], fluxs[:,1], ivflux[:,1], fluxs[:,2], ivflux[:,2],\
                          fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5]]
 

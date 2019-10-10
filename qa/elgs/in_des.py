@@ -6,8 +6,7 @@ import  healpy    as  hp
 
 def prep_indes(nside=256, fname=None):
     if fname  == None:
-      fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'
-      fname    = '/global/cscratch1/sd/raichoor/desits/des.ply'
+      fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'  ##  '/global/cscratch1/sd/raichoor/desits/des.ply'
 
     ##                                                                                                                                                                                                                         
     nside      = np.int(nside)
@@ -42,12 +41,11 @@ def prep_indes(nside=256, fname=None):
 
 def in_des(ra, dec, nside=256, fname=None, verbose=True):
   if fname  == None:
-    fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'
-    fname    = '/global/cscratch1/sd/raichoor/desits/des.ply'
+    fname    = os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/des.ply'  ##  '/global/cscratch1/sd/raichoor/desits/des.ply'
 
   try:
     if verbose:
-      print('Loading pre-calculated pixels.')
+      print('\n\nLoading pre-calculated pixels.\n\n')
         
     hpindes_secure = np.loadtxt(os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/hpindes_secure.txt')
     hp_tbc         = np.loadtxt(os.getenv('CSCRATCH') + '/BGS/SV-ASSIGN/des/hp_tbc.txt')
@@ -56,7 +54,7 @@ def in_des(ra, dec, nside=256, fname=None, verbose=True):
         
   except:
     if verbose:
-      print('Loading failed;  Re-calculate pixels.')
+      print('\n\nLoading failed;  Re-calculate pixels.\n\n')
 
     ##
     nside      = np.int(nside)
