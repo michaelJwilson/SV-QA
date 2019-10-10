@@ -33,7 +33,6 @@ for hsphere in ['north']:  ##  ['north', 'south']
     _output  = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tractors/{}/{}/{}.fits'.format(hsphere, _dir, name)
 
     done     = os.path.exists(_output)
-    done     = False
     
     if not done:
       print('Solving for {} of {}.'.format(i, len(tractors)))
