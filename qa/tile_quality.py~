@@ -69,8 +69,8 @@ tiles      = Table(_file[1].data)['RA', 'DEC', 'TILEID', 'AIRMASS', 'EBV_MED', '
 rand_files = glob.glob('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/randoms/*.fits')
 
 ##  
-names      = ['TILEID', 'PHOTSYS', 'NOBS_G3R', 'BRIGHT', 'SATUR_R', 'ALLMASK_R', 'BAILOUT', 'MEDIUM', 'GALAXY', 'CLUSTER', 'GALDEPTH_R',\
-              'TARDEN_MAX', 'TARDEN_STD', 'TARDEN_MAXTURL', 'LOQDEN_MAX', 'LOQDEN_STD', 'LOQDEN_MAXTURL']
+names      = ['TILEID', 'PHOTSYS', 'NOBS_G2R', 'BRIGHT', 'SATUR_R', 'ALLMASK_R', 'BAILOUT', 'MEDIUM', 'GALAXY', 'CLUSTER', 'GALDEPTH_R',\
+              'PSFSIZE_R', 'TARDEN_MAX', 'TARDEN_STD', 'TARDEN_MAXTURL', 'LOQDEN_MAX', 'LOQDEN_STD', 'LOQDEN_MAXTURL']
 
 data       = {}
 
@@ -85,8 +85,8 @@ for i, _file in enumerate(rand_files):
   randoms    = Table(fits.open(r'/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/randoms/randoms_{}.fits'.format(tileid))[1].data)
   set_photsys(randoms, verbose=False)
 
-  randoms                =  randoms['RA', 'DEC', 'PHOTSYS', 'NOBS_R', 'MASKBITS', 'GALDEPTH_R']
-  randoms['NOBS_G3R']    =  randoms['NOBS_R'] >= 3
+  randoms                =  randoms['RA', 'DEC', 'PHOTSYS', 'NOBS_R', 'MASKBITS', 'GALDEPTH_R', 'PSFSIZE_R']
+  randoms['NOBS_G2R']    =  randoms['NOBS_R'] >= 2
 
   del randoms['NOBS_R']
 
@@ -104,10 +104,11 @@ for i, _file in enumerate(rand_files):
   data['TILEID'].append(np.int(tileid))
   data['PHOTSYS'].append('/'.join(np.unique(randoms['PHOTSYS'])))
 
-  data['GALDEPTH_R'].append(-2.5 * (np.log10(5. / np.sqrt(np.mean(np.array(randoms['GALDEPTH_R'])))) -9.))
-  
+  data['GALDEPTH_R'].append(-2.5 * (np.log10(5. / np.sqrt(np.median(np.array(randoms['GALDEPTH_R'])))) -9.))
+  data['PSFSIZE_R'].append(np.median(np.array(randoms['PSFSIZE_R'])))
+
   for name in names:
-    if not name in ['TILEID', 'PHOTSYS', 'TARDEN_MAX', 'TARDEN_STD', 'TARDEN_MAXTURL', 'LOQDEN_MAX', 'LOQDEN_STD', 'LOQDEN_MAXTURL', 'GALDEPTH_R', 'ASSIGN_TURL', 'TARGETS_TURL']:
+    if not name in ['TILEID', 'PHOTSYS', 'TARDEN_MAX', 'TARDEN_STD', 'TARDEN_MAXTURL', 'LOQDEN_MAX', 'LOQDEN_STD', 'LOQDEN_MAXTURL', 'GALDEPTH_R', 'PSFSIZE_R', 'ASSIGN_TURL', 'TARGETS_TURL']:
       data[name].append(100.0 * np.count_nonzero(randoms[name] == True) / len(randoms))
 
   ##  Assigned truth with legacy columns.                                                                                                                                                                                        
@@ -166,8 +167,9 @@ tile_fails['ASSIGN_TURL']  = Column(data=assign_link,  name='ASSIGN_TURL',  dtyp
 tile_fails['TARGETS_TURL'] = Column(data=targets_link, name='TARGETS_TURL', dtype='S32', length=len(tile_fails))
 
 ##  Lower the precision for pprint.
-for col in ['NOBS_G3R', 'GALDEPTH_R', 'BRIGHT', 'SATUR_R', 'ALLMASK_R', 'BAILOUT', 'MEDIUM', 'GALAXY', 'CLUSTER',\
-            'TARDEN_STD', 'LOQDEN_STD', 'EBV_MED', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEFRAC_GRZ', 'BRIGHTVTMAG']:
+for col in ['NOBS_G2R', 'GALDEPTH_R', 'BRIGHT', 'SATUR_R', 'ALLMASK_R', 'BAILOUT', 'MEDIUM', 'GALAXY', 'CLUSTER',\
+            'TARDEN_STD', 'LOQDEN_STD', 'EBV_MED', 'STAR_DENSITY', 'IMAGEFRAC_R', 'IMAGEFRAC_GRZ', 'BRIGHTVTMAG',\
+            'PSFSIZE_R']:
 
   tile_fails[col]   = Column(data=np.array(tile_fails[col]), name=col, dtype=np.float16, length=len(tile_fails[col]))
 
@@ -189,28 +191,27 @@ for i, _file in enumerate(rand_files):
       
   ##  AGES
   try:
-    dat    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/bytile/ages_reduced-north_{:06d}.fits'.format(tileid))[1].data)
-    ngal   = len(dat)
+    dat   = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/bytile/ages_reduced-north_{:06d}.fits'.format(tileid))[1].data)
+    ngal  = len(dat)
 
-  else:
-    ngal   = 0  
+  except:
+    ngal  = 0  
 
   try:
-    dat    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/bytile/ages_reduced-south_{:06d}.fits'.format(tileid))[1].data)
-    ngal  += len(dat)
+    dat   = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/bytile/ages_reduced-south_{:06d}.fits'.format(tileid))[1].data)
+    ngal += len(dat)
 
   except:
     pass
     
   tile_fails['NAGES'][tile_fails['TILEID'] == tileid] = '{:d}'.format(ngal)
 
-
-  ##  SDSS                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+  ##  SDSS                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
   try:
     dat    = Table(fits.open('/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/truth/assigned/bytile/sdss-north_{:06d}.fits'.format(tileid))[1].data)
     ngal   = len(dat)
 
-  else:
+  except:
     ngal   = 0
 
   try:

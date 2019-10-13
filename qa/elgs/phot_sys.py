@@ -9,8 +9,13 @@ def set_photsys(_dat, verbose=True):
     cols                  =  _dat.columns
     dat                   =  Table(_dat, names=cols, copy=True)
 
-    dat['PHOTSYS']        =  Column(data=np.array(dat['PHOTSYS']), name='PHOTSYS', dtype='S32')
+    try:
+      dat['PHOTSYS']      =  Column(data=np.array(dat['PHOTSYS']), name='PHOTSYS', dtype='S32')
 
+    except:
+      dat['PHOTSYS']                      =  Column(data=np.array(['N'] * len(dat)), name='PHOTSYS', dtype='S32')
+      dat['PHOTSYS'][dat['DEC'] < 32.375] = 'S'
+ 
     isin                  =  dat['PHOTSYS'] == 'N'
     dat['PHOTSYS'][isin]  = 'BMZLS'
 
