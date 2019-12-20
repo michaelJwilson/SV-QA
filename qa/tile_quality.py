@@ -18,7 +18,7 @@ from   astropy                       import   constants as const
 from   desitarget.geomask            import   circles
 from   in_des                        import   in_des
 from   phot_sys                      import   set_photsys
-from   desitarget.sv1.sv1_targetmask import desi_mask, bgs_mask
+from   desitarget.sv1.sv1_targetmask import   desi_mask, bgs_mask
 
 
 try:
