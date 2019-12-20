@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
  gcap      = 'south'
  snr       =      9
- compute   =  False
+ compute   =   True
  
  if compute:
   ##
@@ -81,12 +81,14 @@ if __name__ == '__main__':
       lsm['TARGETID'] = encode_targetid(objid=lsm['OBJID'], brickid=lsm['BRICKID'], release=lsm['RELEASE'], sky=0, mock=0)
       lsm['SURVEY']   = depth
 
-      hsc        = hstack([lsm, hsc])
+      hsc             = hstack([lsm, hsc])
       
       hsc['FRANKENZ'] = hsc['frankenz_photoz_best']
-
+      hsc['MIZUKIZ']  = hsc['mizuki_photoz_best']
+      
       del  hsc['frankenz_photoz_best']
-            
+      del  hsc['mizuki_photoz_best']
+      
       print('Solving for {}.'.format(nsurvey))
 
       ##  hsc.pprint()

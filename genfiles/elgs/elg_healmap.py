@@ -21,7 +21,9 @@ parea          = hp.nside2pixarea(nside, degrees = True)
 
 cols           = ['RA', 'DEC', 'MORPHTYPE', 'DESI_TARGET', 'FLUX_G', 'FLUX_R', 'FLUX_Z',\
                   'MW_TRANSMISSION_G', 'MW_TRANSMISSION_R', 'MW_TRANSMISSION_Z',\
-                  'FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_Z', 'TARGETID', 'DCHISQ']
+                  'FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_Z', 'TARGETID', 'DCHISQ',\
+                  'GALDEPTH_G', 'GALDEPTH_R', 'GALDEPTH_Z', 'PSFDEPTH_G', 'PSFDEPTH_R',\
+                  'PSFDEPTH_Z', 'EBV']
 
 def write_elgs(elgs, mtype=None, cutlevel=None, cutcol=None, write_elgs=False, ext=''):  
   if write_elgs:
@@ -61,7 +63,7 @@ def write_elgs(elgs, mtype=None, cutlevel=None, cutcol=None, write_elgs=False, e
   
     
 if __name__ == '__main__':
- compute        = False
+ compute        = True
 
  ext            = '_chi2'  ##  '_r_z'
 
@@ -73,7 +75,7 @@ if __name__ == '__main__':
 
   ##  elgs      = Table(fits.open(targets[0])[1].data)
   elgs          = Table([fits.open(targets[0])[1].data[x] for x in cols], names=cols)
-  elgs          = elgs[(elgs['DESI_TARGET'] & desi_mask.mask('ELG')) != 0]
+  elgs          = elgs[(elgs['DESI_TARGET']    & desi_mask.mask('ELG')) != 0]
 
   ##  S/N should be prior to extinction correction. 
   elgs['GSNR']  = np.sqrt(elgs['FLUX_IVAR_G']) * elgs['FLUX_G'] ##  elgs['MW_TRANSMISSION_G']
@@ -130,11 +132,6 @@ if __name__ == '__main__':
 
     elgs         = vstack([elgs, _in])
   
-    ##  Now checking indiv. obj. in the tbc pixels.
-    if i % 5 == 0:
-      ##  continue
-      write_elgs(elgs, write_elgs=False, mtype=None, cutcol=None, cutlevel=None)
-
   ##  Forces exit. 
   write_elgs(elgs, write_elgs=True, mtype=None, cutcol=None, cutlevel=None) 
       

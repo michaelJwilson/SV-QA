@@ -12,11 +12,11 @@ from    fitsio              import  FITS, FITSHDR
 
 ##
 cols         = ['release', 'brick_primary', 'apflux_resid_g', 'apflux_resid_r', 'apflux_resid_z', 'brickid', 'objid',\
-                'apflux_ivar_g', 'apflux_ivar_r', 'z']
+                'apflux_ivar_g', 'apflux_ivar_r', 'apflux_ivar_z', 'shapeexp_r', 'type']
 
 mcols        = ['psf_flux', 'psf_flux_ivar', 'rex_flux', 'rex_flux_ivar', 'brickid', 'objid']
 
-verbose      =  False
+verbose      =  True
 
 for hsphere in ['north']:  ##  ['north', 'south']
   tractors   = glob.glob('/global/project/projectdirs/cosmo/data/legacysurvey/dr8/{}/tractor/*/*.fits'.format(hsphere))[::-1]
@@ -35,6 +35,7 @@ for hsphere in ['north']:  ##  ['north', 'south']
     _output  = '/global/cscratch1/sd/mjwilson/BGS/SV-ASSIGN/tractors/{}/{}/{}.fits'.format(hsphere, _dir, name)
 
     done     = os.path.exists(_output)
+    done     = False
     
     if not done:
       print('Solving for {} of {}.'.format(i, len(tractors)))
@@ -96,12 +97,19 @@ for hsphere in ['north']:  ##  ['north', 'south']
       ##
       
       radii    = ['_0p5', '_0p75', '_1p0', '_1p5', '_2p0', '_3p5', '_5p0', '_7p0']
+
       apf_namg = ['apflux_resid_g'.upper() + x for x in radii]
       apf_namr = ['apflux_resid_r'.upper() + x for x in radii]
       apf_namz = ['apflux_resid_z'.upper() + x for x in radii]
-            
-      names    = ['TARGETID', 'BRICKID', 'OBJID'] + apf_namg + apf_namr + apf_namz + ['PSF_FLUXG', 'PSF_FLUXG_IVAR', 'PSF_FLUXR', 'PSF_FLUXR_IVAR',\
-                  'PSF_FLUXZ', 'PSF_FLUXZ_IVAR', 'REX_FLUXG', 'REX_FLUXG_IVAR', 'REX_FLUXR', 'REX_FLUXR_IVAR', 'REX_FLUXZ', 'REX_FLUXZ_IVAR']
+
+      apv_namg = ['apflux_ivar_g'.upper()  + x for x in radii]
+      apv_namr = ['apflux_ivar_r'.upper()  + x for x in radii]
+      apv_namz = ['apflux_ivar_z'.upper()  + x for x in radii]
+      
+      names    = ['TARGETID', 'BRICKID', 'OBJID'] + apf_namg + apv_namg + apf_namr + apv_namr + apf_namz + apv_namz + ['PSF_FLUXG', 'PSF_FLUXG_IVAR', 'PSF_FLUXR', 'PSF_FLUXR_IVAR',\
+                                                                                                                       'PSF_FLUXZ', 'PSF_FLUXZ_IVAR', 'REX_FLUXG', 'REX_FLUXG_IVAR',\
+                                                                                                                       'REX_FLUXR', 'REX_FLUXR_IVAR', 'REX_FLUXZ', 'REX_FLUXZ_IVAR',\
+                                                                                                                       'EXP_RADII']
 
       '''
       output   = Table(data=[tid, data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'], fluxs[:,0], ivflux[:,0],\
@@ -113,23 +121,27 @@ for hsphere in ['north']:  ##  ['north', 'south']
       output.write(_output, format='fits', overwrite=True)
       '''
       
-      outdata   =  np.c_[tid, data['brickid'], data['objid'], data['apflux_resid_g'], data['apflux_resid_r'], data['apflux_resid_z'],\
-                         data['apflux_ivar_g'], data['apflux_ivar_r'], data['apflux_ivar_z'],\  
+      outdata   =  np.c_[tid, data['brickid'], data['objid'], data['apflux_resid_g'], data['apflux_ivar_g'], data['apflux_resid_r'], data['apflux_ivar_r'],\
+                         data['apflux_resid_z'], data['apflux_ivar_z'],\
                          fluxs[:,0], ivflux[:,0], fluxs[:,1], ivflux[:,1], fluxs[:,2], ivflux[:,2],\
-                         fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5]]
+                         fluxs[:,3], ivflux[:,3], fluxs[:,4], ivflux[:,4], fluxs[:,5], ivflux[:,5], data['shapeexp_r']]
 
       ##  print(len(tid), len(data), len(fluxs), len(ivflux))
 
       if verbose:
         toprint = Table(data=outdata, names=names)
-        toprint.pprint(max_width=-1)
+        toprint.pprint(max_width=-1) 
         
-      output   = FITS(_output, 'rw')
-      output.write(outdata, names=names)
+        ##  print(Table(data=np.c_[data['type'], toprint['EXP_RADII']], names=['MORPHTYPE', 'EXP_RADII']))
+        
+      ##  output   = FITS(_output, 'rw')
+      ##  output.write(outdata, names=names)
       
       metrics.close()
 
       print('{} written.'.format(_output))
+
+      exit(0)
       
     else:
       continue
